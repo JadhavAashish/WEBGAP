@@ -6,7 +6,8 @@
   const bcrypt = require('bcrypt');
   const path = require('path');
   const multer = require('multer');
-
+  const AWS = require('aws-sdk');
+ 
   const app = express();
   app.use(bodyParser.json());
   app.use(cors());
