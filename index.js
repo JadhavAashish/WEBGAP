@@ -1,36 +1,3 @@
-  /* const express = require ('express');
-  const bodyParcer = require ('body-parser');
-  const cors = require ('cors');
-  const sql = require ('mssql/msnodesqlv8');
-
-  const app = express();
-  app.use(bodyParcer.json());
-  app.use(cors());
-
-
-  const config = {
-    driver: 'msnodesqlv8',
-    connectionString: 'Driver={SQL Server};Server=AYJLAPTOP\\SQLEXPRESS;Database=GapData1;Trusted_Connection=yes;',
-      options: {
-      trustedConnection: true, 
-    },
-  };
-
-  sql.connect(config , (err)=>{
-      if(err){
-          console.log('Error:',err);
-      }else{
-          console.log('connected')
-      }
-  });
-
-  // Start the server
-  const PORT = process.env.PORT || 8090;
-  app.listen(PORT, () => {
-    console.log(`Server is running on PORT ${PORT}`);
-  });
-  */
-
   const express = require('express');
   const bodyParser = require('body-parser');
   const cors = require('cors');
@@ -39,11 +6,6 @@
   const bcrypt = require('bcrypt');
   const path = require('path');
   const multer = require('multer');
-  const AWS = require('aws-sdk');
-  const { v4: uuidv4 } = require('uuid');
-  const { PutObjectCommand, S3Client } = require('@aws-sdk/client-s3');
-  const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
-
 
   const app = express();
   app.use(bodyParser.json());
