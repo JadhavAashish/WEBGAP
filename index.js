@@ -1,3 +1,36 @@
+  /* const express = require ('express');
+  const bodyParcer = require ('body-parser');
+  const cors = require ('cors');
+  const sql = require ('mssql/msnodesqlv8');
+
+  const app = express();
+  app.use(bodyParcer.json());
+  app.use(cors());
+
+
+  const config = {
+    driver: 'msnodesqlv8',
+    connectionString: 'Driver={SQL Server};Server=AYJLAPTOP\\SQLEXPRESS;Database=GapData1;Trusted_Connection=yes;',
+      options: {
+      trustedConnection: true, 
+    },
+  };
+
+  sql.connect(config , (err)=>{
+      if(err){
+          console.log('Error:',err);
+      }else{
+          console.log('connected')
+      }
+  });
+
+  // Start the server
+  const PORT = process.env.PORT || 8090;
+  app.listen(PORT, () => {
+    console.log(`Server is running on PORT ${PORT}`);
+  });
+  */
+
   const express = require('express');
   const bodyParser = require('body-parser');
   const cors = require('cors');
@@ -7,7 +40,11 @@
   const path = require('path');
   const multer = require('multer');
   const AWS = require('aws-sdk');
- 
+  const { v4: uuidv4 } = require('uuid');
+  const { PutObjectCommand, S3Client } = require('@aws-sdk/client-s3');
+  const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+
+
   const app = express();
   app.use(bodyParser.json());
   app.use(cors());
@@ -24,7 +61,7 @@ const dbConfig = {
   },
 };
 
-const defaultDatabase = 'GapCompany'; // Default database name
+const defaultDatabase = 'WinGapCompany'; // Default database name
 
 // Connect to the default database on server startup
 connectToDatabase(defaultDatabase)
@@ -36,7 +73,7 @@ connectToDatabase(defaultDatabase)
   });
 
   app.get('/api/company_code', (req, res) => {
-    const query = 'SELECT * FROM GapCompany.dbo.CompanyMaster';
+    const query = 'SELECT * FROM WinGapCompany.dbo.CompanyMaster';
     sql.query(query, (err, result) => {
       if (err) {
         console.log('Error:', err);
@@ -48,7 +85,7 @@ connectToDatabase(defaultDatabase)
   });
 
   app.get('/api/database_year_master', (req, res) => {
-    const query = 'SELECT * FROM GapCompany.dbo.YearMaster';
+    const query = 'SELECT * FROM WinGapCompany.dbo.YearMaster';
     sql.query(query, (err, result) => {
       if (err) {
         console.log('Error:', err);
@@ -67,8 +104,8 @@ connectToDatabase(defaultDatabase)
       return res.status(400).json({ error: 'Company code and financial year are required' });
     }
   
-    const databaseName = `GapData${companyCode}FY${financialYear}`;
-    console.log('GapData${companyCode}-${financialYear}',`GapData${companyCode}FY${financialYear}`);
+    const databaseName = `WinGapData${companyCode}FY${financialYear}`;
+    console.log('WinGapData${companyCode}-${financialYear}',`GapData${companyCode}FY${financialYear}`);
     // const databaseName = `GapData${companyCode}`;
   
     if (sql && sql.close) {
@@ -8340,3 +8377,170 @@ app.post('/api/gangsub', (req, res) => {
       }
     });
   });
+
+
+//For Bill Entry
+app.get('/api/billentry/:flag', (req, res) => {
+  const flag = req.params.flag;
+  
+  const query = `
+    SELECT *
+    FROM Billsub
+    WHERE FLAG = @flag`;
+
+  const request = new sql.Request();
+  request.input('flag', sql.NVarChar, flag); 
+
+  request.query(query, (err, result) => {
+    if (err) {
+      console.log('Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    } else {
+      res.json(result.recordset);
+    }
+  });
+});
+
+
+app.post('/api/billentry/:EntryNo', (req, res) => {
+  try {
+    const entryNo = req.params.EntryNo;
+    const entryData = req.body;
+
+    const values = entryData.map(entry => `(
+      ${entryNo}, 
+      '${entry.trDate}', 
+      ${entry.Amount},
+      '${entry.AcCode}',
+      '${entry.BillNo}',
+      '${entry.BillDate}',
+      '${entry.Desc1}',
+      '${entry.Desc2}',
+      '${entry.MRP}',
+      ${entry.Qty},
+      ${entry.Rate},
+      ${entry.DiscAmt},
+      ${entry.TaxableAmt},
+      '${entry.GstRateCode}',
+      ${entry.GstRate},
+      ${entry.CGstAmt},
+      ${entry.SGstAmt},
+      ${entry.IGstAmt},
+      ${entry.RoundOff},
+      ${entry.NetAmt},
+      ${entry.DeptCode},
+      ${entry.YearCode},
+      ${entry.CompCode},
+      ${entry.USERID},
+      ${entry.uniqueCode}
+    )`).join(',');
+
+    const query = `
+      DELETE FROM Billsub WHERE EntryNo = ${entryNo};
+
+      INSERT INTO Billsub (
+      ENTRYNO,
+      TRDATE,
+      AMOUNT,
+      ACCODE,
+      BILLNO,
+      BILLDATE,
+      DESC1,
+      DESC2,
+      MRP,
+      QTY,
+      RATE,
+      DISCAMT,
+      TAXABLEAMT,
+      GSTRATECODE,
+      GSTRATE,
+      CGSTAMT,
+      SGSTAMT,
+      IGSTAMT,
+      ROUNDOFF,
+      NETAMT,
+      DeptCode,
+      YearCode,
+      CompCode,
+      USERID,
+      COMPUTERID
+        ) VALUES ${values};`;
+
+    sql.query(query, (err, result) => {
+      if (err) {
+        console.log('Error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+      } else {
+        res.json({ message: 'Data saved successfully' });
+      }
+    });
+  } catch (error) {
+    console.log('Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/* app.post('/api/billentry/:EntryNo', (req, res) => {
+  const entryNo = req.params.EntryNo;
+  const requestData = req.body;
+  const values = requestData.map(entry => `(
+    ${entryNo}, 
+    '${entry.TrDate}', 
+    '${entry.RRNo ?entry.RRNo:''}',
+    ${entry.TotalWagons}, 
+    '${entry.RakeDate}', 
+    '${entry.RakeTime}', 
+    '${entry.StationName ?entry.StationName:''}',
+    '${entry.WagonNo}',
+    ${entry.ProductCode},
+    ${entry.Qty},
+    ${entry.Weight},
+    '${entry.SubAcCode ? entry.SubAcCode:''}',
+    ${entry.TotalQty},  
+    ${entry.TotalWeight},
+    ${entry.DeptCode},
+    ${entry.YearCode},
+    ${entry.CompCode ? entry.CompCode: null},
+    ${entry.UserID},
+    ${entry.ID ? entry.CompCode: null}
+    )`).join(',');
+
+let query = `
+    delete from RRWagonEntry where EntryNo = ${entryNo};
+
+    INSERT INTO RRWagonEntry (
+      EntryNo,
+      TrDate,
+      RRNo,
+      TotalWagons,
+      RakeDate,
+      RakeTime,
+      StationCode,
+      WagonNo,
+      ProductCode,
+      Qty,
+      Weight,
+      PartyCode,
+      TotalQty,
+      TotalWeight,
+      DeptCode,
+      YearCode,
+      Compcode,
+      UserID,
+      WagonEntryNo
+    ) VALUES ${values};`;
+
+
+  sql.query(query, (err, result) => {
+      if (err) {
+          console.log('query:', query);
+          console.log('Error:', err);
+
+          res.status(500).json({ error: 'Internal server error' });
+      } else {
+          res.json({ message: 'Data saved successfully' });
+      }
+  });
+});
+ */
+
