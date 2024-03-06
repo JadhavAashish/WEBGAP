@@ -1,36 +1,3 @@
-  /* const express = require ('express');
-  const bodyParcer = require ('body-parser');
-  const cors = require ('cors');
-  const sql = require ('mssql/msnodesqlv8');
-
-  const app = express();
-  app.use(bodyParcer.json());
-  app.use(cors());
-
-
-  const config = {
-    driver: 'msnodesqlv8',
-    connectionString: 'Driver={SQL Server};Server=AYJLAPTOP\\SQLEXPRESS;Database=GapData1;Trusted_Connection=yes;',
-      options: {
-      trustedConnection: true, 
-    },
-  };
-
-  sql.connect(config , (err)=>{
-      if(err){
-          console.log('Error:',err);
-      }else{
-          console.log('connected')
-      }
-  });
-
-  // Start the server
-  const PORT = process.env.PORT || 8090;
-  app.listen(PORT, () => {
-    console.log(`Server is running on PORT ${PORT}`);
-  });
-  */
-
   const express = require('express');
   const bodyParser = require('body-parser');
   const cors = require('cors');
@@ -5042,7 +5009,7 @@ app.use('/img', express.static('C:/Users/91942/Pictures/photopath'));
           WHERE EntryNo = '${operation === 'update' ? entryNo : maxEntryNo + 1}' AND Flag = '${flag}' AND DeptCode = '${DeptCode}' AND YearCode = '${YearCode}' AND CompCode = '${CompCode}';
     
           INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, DrAmt,CrAmt)
-          VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${UserID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', '${trDate}',15, '${AcCode}','${TotNetAmt}',0);
+          VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${UserID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', '${trDate}','${AcCode}', '${AcCode}','${TotNetAmt}',0);
     
     
           INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, CrAmt,DrAmt)
@@ -5110,7 +5077,7 @@ app.use('/img', express.static('C:/Users/91942/Pictures/photopath'));
   
     try {
       // Fetch user permissions from the database based on the user making the request
-      const userPermissionsQuery = `SELECT AllowEntryDelete FROM Users WHERE UserName='${UserName}'`;
+      const userPermissionsQuery = `SELECT AllowEntryDelete FROM dbo.Users WHERE UserName='${UserName}'`;
   
       sql.query(userPermissionsQuery, async (userErr, userResults) => {
         if (userErr) {
@@ -5122,9 +5089,9 @@ app.use('/img', express.static('C:/Users/91942/Pictures/photopath'));
         // Check if user results are not empty
         if (userResults.recordset && userResults.recordset.length > 0) {
           // Check if user has permission to delete entries
-          const { AllowMasterDelete } = userResults.recordset[0];
+          const { AllowEntryDelete } = userResults.recordset[0];
   
-          if (AllowMasterDelete === 1) {
+          if (AllowEntryDelete === 1) {
             // The user has permission to delete entries
             const deleteQuery = `
               DELETE FROM BillSub  WHERE EntryNo='${entryNo}' AND Flag='${flag}';
@@ -8402,47 +8369,54 @@ app.get('/api/billentry/:flag', (req, res) => {
 });
 
 
-app.post('/api/billentry/:EntryNo', (req, res) => {
+app.post('/api/billentry/:EntryNo/:Flag', (req, res) => {
   try {
-    const entryNo = req.params.EntryNo;
+    const EntryNo = req.params.EntryNo;
+    const Flag = req.params.Flag;
     const entryData = req.body;
 
     const values = entryData.map(entry => `(
-      ${entryNo}, 
-      '${entry.trDate}', 
-      ${entry.Amount},
-      '${entry.AcCode}',
-      '${entry.BillNo}',
-      '${entry.BillDate}',
-      '${entry.Desc1}',
-      '${entry.Desc2}',
+      ${entry.ENTRYNO}, 
+      '${entry.FLAG}',
+      '${entry.TRDATE}', 
+      ${entry.AMOUNT || 0},
+      '${entry.ACCODE}',
+      '${entry.ITCODE}',
+      '${entry.BILLNO}',
+      '${entry.BILLDATE}',
+      '${entry.DESC1}',
+      '${entry.DESC2}',
       '${entry.MRP}',
-      ${entry.Qty},
-      ${entry.Rate},
-      ${entry.DiscAmt},
-      ${entry.TaxableAmt},
-      '${entry.GstRateCode}',
-      ${entry.GstRate},
-      ${entry.CGstAmt},
-      ${entry.SGstAmt},
-      ${entry.IGstAmt},
-      ${entry.RoundOff},
-      ${entry.NetAmt},
-      ${entry.DeptCode},
-      ${entry.YearCode},
-      ${entry.CompCode},
-      ${entry.USERID},
-      ${entry.uniqueCode}
+      ${entry.QTY || 0},
+      ${entry.RATE || 0},
+      ${entry.DISCAMT || 0},
+      ${entry.TAXABLEAMT || 0},
+      '${entry.GSTRATECODE}',
+      ${entry.GSTRATE || 0},
+      ${entry.CGSTAMT || 0},
+      ${entry.SGSTAMT || 0},
+      ${entry.IGSTAMT || 0},
+      ${entry.ROUNDOFF || 0},
+      ${entry.NETAMT || 0},
+      ${entry.DeptCode || 0},
+      ${entry.YearCode || 0},
+      ${entry.CompCode || 0},
+      ${entry.USERID || 0},
+      ${entry.uniqueCode || 0}
     )`).join(',');
+    
+    console.log("Entry Data :",values)
 
     const query = `
-      DELETE FROM Billsub WHERE EntryNo = ${entryNo};
+      DELETE FROM Billsub WHERE ENTRYNO = '${EntryNo}' AND FLAG = '${Flag}';
 
       INSERT INTO Billsub (
       ENTRYNO,
+      FLAG,  
       TRDATE,
       AMOUNT,
       ACCODE,
+      ITCODE,
       BILLNO,
       BILLDATE,
       DESC1,
@@ -8479,68 +8453,4 @@ app.post('/api/billentry/:EntryNo', (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
-/* app.post('/api/billentry/:EntryNo', (req, res) => {
-  const entryNo = req.params.EntryNo;
-  const requestData = req.body;
-  const values = requestData.map(entry => `(
-    ${entryNo}, 
-    '${entry.TrDate}', 
-    '${entry.RRNo ?entry.RRNo:''}',
-    ${entry.TotalWagons}, 
-    '${entry.RakeDate}', 
-    '${entry.RakeTime}', 
-    '${entry.StationName ?entry.StationName:''}',
-    '${entry.WagonNo}',
-    ${entry.ProductCode},
-    ${entry.Qty},
-    ${entry.Weight},
-    '${entry.SubAcCode ? entry.SubAcCode:''}',
-    ${entry.TotalQty},  
-    ${entry.TotalWeight},
-    ${entry.DeptCode},
-    ${entry.YearCode},
-    ${entry.CompCode ? entry.CompCode: null},
-    ${entry.UserID},
-    ${entry.ID ? entry.CompCode: null}
-    )`).join(',');
-
-let query = `
-    delete from RRWagonEntry where EntryNo = ${entryNo};
-
-    INSERT INTO RRWagonEntry (
-      EntryNo,
-      TrDate,
-      RRNo,
-      TotalWagons,
-      RakeDate,
-      RakeTime,
-      StationCode,
-      WagonNo,
-      ProductCode,
-      Qty,
-      Weight,
-      PartyCode,
-      TotalQty,
-      TotalWeight,
-      DeptCode,
-      YearCode,
-      Compcode,
-      UserID,
-      WagonEntryNo
-    ) VALUES ${values};`;
-
-
-  sql.query(query, (err, result) => {
-      if (err) {
-          console.log('query:', query);
-          console.log('Error:', err);
-
-          res.status(500).json({ error: 'Internal server error' });
-      } else {
-          res.json({ message: 'Data saved successfully' });
-      }
-  });
-});
- */
 
