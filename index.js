@@ -1844,6 +1844,7 @@ app.use('/img', express.static('C:/Users/91942/Pictures/photopath'));
         Remark3,
         Remark4,
         Remark5,
+        StateCode,
         UserID
       } = req.body;
     
@@ -1867,6 +1868,7 @@ app.use('/img', express.static('C:/Users/91942/Pictures/photopath'));
         Remark3,
         Remark4,
         Remark5,
+        StateCode,
         UserID
         )
         VALUES (
@@ -1888,6 +1890,7 @@ app.use('/img', express.static('C:/Users/91942/Pictures/photopath'));
           N'${Remark3}',
           N'${Remark4}',
           N'${Remark5}',
+          '${StateCode}',
           '${UserID}'
         );
       `;
@@ -1923,6 +1926,7 @@ app.use('/img', express.static('C:/Users/91942/Pictures/photopath'));
         Remark3,
         Remark4,
         Remark5,
+        StateCode,
         UserID
       } = req.body;
     
@@ -1946,6 +1950,7 @@ app.use('/img', express.static('C:/Users/91942/Pictures/photopath'));
           Remark3=N'${Remark3}',
           Remark4=N'${Remark4}',
           Remark5=N'${Remark5}',
+          StateCode='${StateCode}',
           UserID='${UserID}'
         WHERE AcCode='${AcCode}';
       `;
@@ -1976,8 +1981,8 @@ app.use('/img', express.static('C:/Users/91942/Pictures/photopath'));
               Remark3,
               Remark4,
               Remark5,
+              StateCode,
               UserID
-        
             });
           } else {
             res.status(404).json({ error: 'Record not found' });
@@ -4991,7 +4996,7 @@ app.use('/img', express.static('C:/Users/91942/Pictures/photopath'));
 
       INSERT INTO Billsub (TRDATE, Flag, AcCode, ItCode, BillNo, BillDate, Desc1, Desc2, MRP, Qty, Rate, Amount, DiscAmt, TaxableAmt, GstRateCode, GstRate, CGstAmt, SGstAmt, IGstAmt, RoundOff, NetAmt, ENTRYNO, YearCode, DeptCode, CompCode, USERID, COMPUTERID)
       SELECT  
-      '${trDate}',Flag,${AcCode},ItCode,'${BillNo}','${BillDate}','${Desc1}','${Desc2}', MRP,Qty,Rate,Amount,DiscAmt,TaxableAmt,GstRateCode,GstRate,CGstAmt,SGstAmt,IGstAmt,RoundOff,
+      '${trDate}',Flag,'${AcCode}',ItCode,'${BillNo}','${BillDate}','${Desc1}','${Desc2}', MRP,Qty,Rate,Amount,DiscAmt,TaxableAmt,GstRateCode,GstRate,CGstAmt,SGstAmt,IGstAmt,RoundOff,
        NetAmt,'${operation === 'update' ? entryNo : maxEntryNo + 1}', YearCode,DeptCode,CompCode,USERID,COMPUTERID
       FROM BillsubTemp;
 
@@ -5038,7 +5043,7 @@ app.use('/img', express.static('C:/Users/91942/Pictures/photopath'));
             WHERE EntryNo = '${operation === 'update' ? entryNo : maxEntryNo + 1}' AND Flag = '${flag}' AND DeptCode = '${DeptCode}' AND YearCode = '${YearCode}' AND CompCode = '${CompCode}';
             
             INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, CrAmt,DrAmt)
-            VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${UserID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', '${trDate}', 16,'${AcCode}','${TotNetAmt}',0);
+            VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${UserID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', '${trDate}', '${AcCode}','${AcCode}','${TotNetAmt}',0);
         
             
             INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, DrAmt,CrAmt)
@@ -5066,7 +5071,7 @@ app.use('/img', express.static('C:/Users/91942/Pictures/photopath'));
         console.log('Error:', err);
         res.status(500).json({ error: 'Internal server error' });
       } else {
-        res.json({ message: 'Data saved and deleted successfully' });
+        res.json({ message: 'Data saved and deleted successfully'});
       }
     });
   });
