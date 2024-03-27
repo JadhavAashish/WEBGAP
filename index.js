@@ -100,7 +100,7 @@ app.post('/connect', async (req, res) => {
   }
 
   const databaseName = `WinGapData${dbcompanyCode}FY${financialYear}`;
-  console.log('WinGapData${companyCode}-${financialYear}', `GapData${dbcompanyCode}FY${financialYear}`);
+  console.log('WinGapData${companyCode}-${financialYear}', `WinGapData${dbcompanyCode}FY${financialYear}`);
   // const databaseName = `GapData${companyCode}`;
 
   if (sql && sql.close) {
@@ -138,6 +138,55 @@ async function connectToDatabase(databaseName) {
   }
 }
 
+app.put('/api/DB-change-password', async (req, res) => {
+  const { clientId, oldDBPassword, newDBPassword } = req.body;
+
+  try {
+    // Validate input (optional, depending on your requirements)
+    const userQuery = `
+        SELECT * FROM WinGapCompany.dbo.CompanyMaster
+        WHERE ClientID = '${clientId}'
+      `;
+
+    sql.query(userQuery, async (err, result) => {
+      if (err) {
+        console.log('Error Executing SQL query:', err);
+        res.status(500).json({ error: 'Internal server error' });
+      } else {
+        if (result.recordset.length > 0) {
+          const storedPassword = result.recordset[0].MainPassword;
+
+          if (oldDBPassword === storedPassword) {
+            
+            const updateQuery = `
+                UPDATE WinGapCompany.dbo.CompanyMaster
+                SET MainPassword = '${newDBPassword}'
+                WHERE ClientID = '${clientId}'
+              `;
+
+            sql.query(updateQuery, (updateErr) => {
+              if (updateErr) {
+                console.log('Error updating password:', updateErr);
+                res.status(500).json({ error: 'Internal server error' });
+              } else {
+                res.json({ message: 'Password changed successfully' });
+                console.log("Password Updated !...");
+
+              }
+            });
+          } else {
+            res.status(401).json({ error: 'Incorrect old password' });
+          }
+        } else {
+          res.status(404).json({ error: 'User not found' });
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error changing password:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 app.post('/close-sql-connection', async (req, res) => {
   try {
@@ -254,31 +303,6 @@ app.post('/api/login', (req, res) => {
   });
 });
 
-const checkDeleteAuthority = (req, res, next) => {
-  console.log('Checking delete authority middleware');
-  const username = req.session.username;
-  console.log('Username:', username);
-  const query = `SELECT AllowMasterDelete FROM Users WHERE UserName='${username}'`;
-  sql.query(query, (err, result) => {
-    if (err) {
-      console.log('Error:', err);
-      res.status(500).json({ error: 'Internal server error' });
-    } else {
-      if (result && result.recordset && result.recordset.length > 0) {
-        const allowDelete = result.recordset[0].AllowMasterDelete;
-        if (allowDelete === 1) {
-          console.log("allowDelete", allowDelete);
-          console.log('SQL Query:', query);
-          next();
-        } else {
-          res.status(403).json({ error: 'Not allowed to delete' });
-        }
-      } else {
-        res.status(403).json({ error: 'User not found or permission not set' });
-      }
-    }
-  });
-};
 
 app.post('/multiple-upload', upload.array('images', 9), (req, res) => {
   const files = req.files;
@@ -310,7 +334,6 @@ app.post('/multiple-upload', upload.array('images', 9), (req, res) => {
   res.send('Files uploaded successfully.');
 });
 
-
 app.post('/single-upload', upload.single('image'), (req, res) => {
   const file = req.file;
   if (!file) {
@@ -335,7 +358,6 @@ app.post('/single-upload', upload.single('image'), (req, res) => {
     res.send('File uploaded successfully.');
   });
 });
-
 
 app.get('/file/:fileName', (req, res) => {
   const fileName = req.params.fileName;
@@ -5504,9 +5526,11 @@ app.put('/api/NewSaleEntries/:entryNo/:uniqueCode/:flag', (req, res) => {
   });
 });
 
-app.delete('/api/billsubtempentries/:entryNo/:YearCode', (req, res) => {
-  const { entryNo, YearCode } = req.params;
-  const query = `DELETE FROM BillSubTemp WHERE EntryNo=${entryNo} AND YearCode=${YearCode}`;
+app.delete('/api/billsubtempentries/:entryNo/:YearCode/:compid', (req, res) => {
+  const { entryNo, YearCode, compid } = req.params;
+  //const { compid } = req.body; // Get 'compid' from request body
+
+  const query = `DELETE FROM BillSubTemp WHERE EntryNo=${entryNo} AND COMPUTERID=${compid} AND YearCode=${YearCode}`;
   sql.query(query, (err) => {
     if (err) {
       console.log('Error:', err);
@@ -5516,6 +5540,20 @@ app.delete('/api/billsubtempentries/:entryNo/:YearCode', (req, res) => {
     }
   });
 });
+
+
+// app.delete('/api/billsubtempentries/:entryNo/:YearCode', (req, res) => {
+//   const { entryNo, YearCode, compid } = req.params;
+//   const query = `DELETE FROM BillSubTemp WHERE COMPUTERID=${compid} AND EntryNo=${entryNo} AND YearCode=${YearCode}`;
+//   sql.query(query, (err) => {
+//     if (err) {
+//       console.log('Error:', err);
+//       res.status(500).json({ error: 'Internal server error' });
+//     } else {
+//       res.json({ message: 'BillSubTemp deleted successfully' });
+//     }
+//   });
+// });
 
 app.delete('/api/clearTemp', (req, res) => {
   const query = `DELETE FROM BillSubTemp`;
@@ -6220,9 +6258,9 @@ app.get('/api/ViewTranEntries', (req, res) => {
 });
 
 app.get('/api/viewBillRegister', (req, res) => {
-  const { ledgerCode, startDate, endDate, flag } = req.query;
-  const query = `select * from viewBillRegister where  Trdate >= @StartDate AND Trdate <= @EndDate AND Flag =@flag;`;
-
+  const { ledgerCode, startDate, endDate, flag, subledgerCode } = req.query;
+  console.log("View Bill Register : ",{ ledgerCode, startDate, endDate, flag });
+  const query = `select * from ViewBillRegister where  TRDATE >= @StartDate AND TRDATE <= @EndDate AND Flag =@flag;`;
   const request = new sql.Request();
   request.input('Accode', sql.Int, ledgerCode);
   request.input('StartDate', sql.NVarChar, startDate);
@@ -8587,3 +8625,545 @@ app.post('/api/billentry/:EntryNo/:Flag', (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+
+
+// For deduction Type Master------------------------------------------------------------------------------------
+
+// GET all deduction Type Master
+app.get('/api/deduction-type', (req, res) => {
+  const query = 'SELECT * FROM DeductionTypeMaster';
+  sql.query(query, (err, result) => {
+    if (err) {
+      console.log('Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    } else {
+      res.json(result.recordset);
+    }
+  });
+});
+
+// POST a new caste
+// POST create a new deduction type
+app.post('/api/deduction-type', (req, res) => {
+  const { DeductionTypeCode, DeductionType, Remark1, UserID } = req.body;
+  const query = `
+      INSERT INTO DeductionTypeMaster (DeductionTypeCode, DeductionType, Remark1, UserID)
+      VALUES ('${DeductionTypeCode}', N'${DeductionType}', N'${Remark1}', '${UserID}');
+    `;
+  sql.query(query, (err) => {
+    if (err) {
+      console.log('Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    } else {
+      res.json({ message: 'Deduction type created successfully' });
+    }
+  });
+});
+
+// PUT update an existing deduction type
+app.put('/api/deduction-type/:DeductionTypeCode', (req, res) => {
+  const { DeductionTypeCode } = req.params;
+  const { DeductionType, Remark1, UserID } = req.body;
+  const query = `
+      UPDATE DeductionTypeMaster
+      SET DeductionType=N'${DeductionType}', Remark1=N'${Remark1}', UserID='${UserID}'
+      WHERE DeductionTypeCode='${DeductionTypeCode}';
+    `;
+  sql.query(query, (err, result) => {
+    if (err) {
+      console.log('Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    } else {
+      if (result.rowsAffected && result.rowsAffected[0] > 0) {
+        res.json({
+          message: 'Deduction type updated successfully',
+          DeductionTypeCode: DeductionTypeCode,
+          DeductionType,
+          Remark1,
+          UserID,
+        });
+      } else {
+        res.status(404).json({ error: 'Record not found' });
+      }
+    }
+  });
+});
+
+// DELETE a deduction type
+app.delete('/api/deduction-type/:deductionTypeCode', async (req, res) => {
+  const { deductionTypeCode } = req.params;
+  const UserName = req.headers['username'];
+
+  try {
+    // Fetch user permissions from the database based on the user making the request
+    const userPermissionsQuery = `SELECT AllowMasterDelete FROM Users WHERE UserName='${UserName}'`;
+
+    sql.query(userPermissionsQuery, async (userErr, userResults) => {
+      if (userErr) {
+        console.log('Error fetching user permissions:', userErr);
+        res.status(500).json({ error: 'Internal server error' });
+        return;
+      }
+
+      // Check if user results are not empty
+      if (userResults.recordset && userResults.recordset.length > 0) {
+        // Check if user has permission to delete entries
+        const { AllowMasterDelete } = userResults.recordset[0];
+
+        if (AllowMasterDelete === 1) {
+          // The user has permission to delete entries
+          const deleteQuery = `DELETE FROM DeductionTypeMaster WHERE DeductionTypeCode='${deductionTypeCode}'`;
+
+          sql.query(deleteQuery, (deleteErr) => {
+            if (deleteErr) {
+              console.log('Error deleting entry:', deleteErr);
+              res.status(500).json({ error: 'Internal server error' });
+            } else {
+              res.json({ message: 'Deduction type deleted successfully' });
+            }
+          });
+        } else {
+          // User does not have permission to delete entries
+          res.status(403).json({ error: 'Permission denied. You do not have the necessary permissions to delete entries.' });
+        }
+      } else {
+        // User not found in the database
+        res.status(404).json({ error: 'User not found.' });
+      }
+    });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+//For Diesel Company
+// GET all diesel company
+app.get('/api/diesel-company', (req, res) => {
+  const query = 'SELECT * FROM DieselCompanyMaster';
+  sql.query(query, (err, result) => {
+    if (err) {
+      console.log('Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    } else {
+      res.json(result.recordset);
+    }
+  });
+});
+
+// POST create a new diesel company
+app.post('/api/diesel-company', (req, res) => {
+  const { DieselCompanyCode, DieselCompanyName, Remark1, UserID } = req.body;
+  const query = `
+      INSERT INTO DieselCompanyMaster (DieselCompanyCode, DieselCompanyName, Remark1, UserID)
+      VALUES ('${DieselCompanyCode}', N'${DieselCompanyName}', N'${Remark1}', '${UserID}');
+    `;
+  sql.query(query, (err) => {
+    if (err) {
+      console.log('Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    } else {
+      res.json({ message: 'Diesel company created successfully' });
+    }
+  });
+});
+
+// PUT update an existing diesel company
+app.put('/api/diesel-company/:DieselCompanyCode', (req, res) => {
+  const { DieselCompanyCode } = req.params;
+  const { DieselCompanyName, Remark1, UserID } = req.body;
+  const query = `
+      UPDATE DieselCompanyMaster
+      SET DieselCompanyName=N'${DieselCompanyName}', Remark1=N'${Remark1}', UserID='${UserID}'
+      WHERE DieselCompanyCode='${DieselCompanyCode}';
+    `;
+  sql.query(query, (err, result) => {
+    if (err) {
+      console.log('Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    } else {
+      if (result.rowsAffected && result.rowsAffected[0] > 0) {
+        res.json({
+          message: 'Diesel company updated successfully',
+          DieselCompanyCode: DieselCompanyCode,
+          DieselCompanyName,
+          Remark1,
+          UserID,
+        });
+      } else {
+        res.status(404).json({ error: 'Record not found' });
+      }
+    }
+  });
+});
+
+// DELETE a diesel company
+app.delete('/api/diesel-company/:DieselCompanyCode', async (req, res) => {
+  const { DieselCompanyCode } = req.params;
+  const UserName = req.headers['username'];
+
+  try {
+    // Fetch user permissions from the database based on the user making the request
+    const userPermissionsQuery = `SELECT AllowMasterDelete FROM Users WHERE UserName='${UserName}'`;
+
+    sql.query(userPermissionsQuery, async (userErr, userResults) => {
+      if (userErr) {
+        console.log('Error fetching user permissions:', userErr);
+        res.status(500).json({ error: 'Internal server error' });
+        return;
+      }
+
+      // Check if user results are not empty
+      if (userResults.recordset && userResults.recordset.length > 0) {
+        // Check if user has permission to delete entries
+        const { AllowMasterDelete } = userResults.recordset[0];
+
+        if (AllowMasterDelete === 1) {
+          // The user has permission to delete entries
+          const deleteQuery = `DELETE FROM DieselCompanyMaster WHERE DieselCompanyCode='${DieselCompanyCode}'`;
+
+          sql.query(deleteQuery, (deleteErr) => {
+            if (deleteErr) {
+              console.log('Error deleting entry:', deleteErr);
+              res.status(500).json({ error: 'Internal server error' });
+            } else {
+              res.json({ message: 'Diesel company deleted successfully' });
+            }
+          });
+        } else {
+          // User does not have permission to delete entries
+          res.status(403).json({ error: 'Permission denied. You do not have the necessary permissions to delete entries.' });
+        }
+      } else {
+        // User not found in the database
+        res.status(404).json({ error: 'User not found.' });
+      }
+    });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+
+
+//For PartyMaster
+// GET all PartyMaster
+app.get('/api/party', (req, res) => {
+  const query = 'SELECT * FROM PartyMaster';
+  sql.query(query, (err, result) => {
+    if (err) {
+      console.log('Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    } else {
+      res.json(result.recordset);
+    }
+  });
+});
+
+// POST create a new party
+app.post('/api/party', (req, res) => {
+  const { PartyCode, PartyName, PartyAddress, PartyDistance, Remark1, UserID } = req.body;
+  const query = `
+      INSERT INTO PartyMaster (PartyCode, PartyName, PartyAddress, PartyDistance, Remark1, UserID)
+      VALUES ('${PartyCode}', N'${PartyName}', N'${PartyAddress}', '${PartyDistance}', N'${Remark1}', '${UserID}');
+    `;
+  sql.query(query, (err) => {
+    if (err) {
+      console.log('Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    } else {
+      res.json({ message: 'Party created successfully' });
+    }
+  });
+});
+
+// PUT update an existing party
+app.put('/api/party/:PartyCode', (req, res) => {
+  const { PartyCode } = req.params;
+  const { PartyName, PartyAddress, PartyDistance, Remark1, UserID } = req.body;
+  const query = `
+      UPDATE PartyMaster
+      SET PartyName=N'${PartyName}', PartyAddress=N'${PartyAddress}', PartyDistance='${PartyDistance}', Remark1=N'${Remark1}', UserID='${UserID}'
+      WHERE PartyCode='${PartyCode}';
+    `;
+  sql.query(query, (err, result) => {
+    if (err) {
+      console.log('Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    } else {
+      if (result.rowsAffected && result.rowsAffected[0] > 0) {
+        res.json({
+          message: 'Party updated successfully',
+          PartyCode: PartyCode,
+          PartyName,
+          PartyAddress,
+          PartyDistance,
+          Remark1,
+          UserID,
+        });
+      } else {
+        res.status(404).json({ error: 'Record not found' });
+      }
+    }
+  });
+});
+
+// DELETE a party
+app.delete('/api/party/:PartyCode', async (req, res) => {
+  const { PartyCode } = req.params;
+  const UserName = req.headers['username'];
+
+  try {
+    // Fetch user permissions from the database based on the user making the request
+    const userPermissionsQuery = `SELECT AllowMasterDelete FROM Users WHERE UserName='${UserName}'`;
+
+    sql.query(userPermissionsQuery, async (userErr, userResults) => {
+      if (userErr) {
+        console.log('Error fetching user permissions:', userErr);
+        res.status(500).json({ error: 'Internal server error' });
+        return;
+      }
+
+      // Check if user results are not empty
+      if (userResults.recordset && userResults.recordset.length > 0) {
+        // Check if user has permission to delete entries
+        const { AllowMasterDelete } = userResults.recordset[0];
+
+        if (AllowMasterDelete === 1) {
+          // The user has permission to delete entries
+          const deleteQuery = `DELETE FROM PartyMaster WHERE PartyCode='${PartyCode}'`;
+
+          sql.query(deleteQuery, (deleteErr) => {
+            if (deleteErr) {
+              console.log('Error deleting entry:', deleteErr);
+              res.status(500).json({ error: 'Internal server error' });
+            } else {
+              res.json({ message: 'Party deleted successfully' });
+            }
+          });
+        } else {
+          // User does not have permission to delete entries
+          res.status(403).json({ error: 'Permission denied. You do not have the necessary permissions to delete entries.' });
+        }
+      } else {
+        // User not found in the database
+        res.status(404).json({ error: 'User not found.' });
+      }
+    });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+//For SlabMaster
+// GET all SlabMaster
+app.get('/api/slab', (req, res) => {
+  const query = 'SELECT * FROM SlabMaster';
+  sql.query(query, (err, result) => {
+    if (err) {
+      console.log('Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    } else {
+      res.json(result.recordset);
+    }
+  });
+});
+
+// POST create a new slab
+app.post('/api/slab', (req, res) => {
+  const { SlabCode, Slab, Distance, Remark1, Remark2, Remark3, UserID } = req.body;
+  const query = `
+      INSERT INTO SlabMaster (SlabCode, Slab, Distance, Remark1, Remark2, Remark3, UserID)
+      VALUES ('${SlabCode}', N'${Slab}', '${Distance}', N'${Remark1}', N'${Remark2}', N'${Remark3}', N'${UserID}');
+    `;
+  sql.query(query, (err) => {
+    if (err) {
+      console.log('Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    } else {
+      res.json({ message: 'Slab created successfully' });
+    }
+  });
+});
+
+// PUT update an existing slab
+app.put('/api/slab/:SlabCode', (req, res) => {
+  const { SlabCode } = req.params;
+  const { Slab, Distance, Remark1, Remark2, Remark3, UserID } = req.body;
+  const query = `
+      UPDATE SlabMaster
+      SET Slab=N'${Slab}', Distance='${Distance}', Remark1=N'${Remark1}', Remark2=N'${Remark2}', Remark3=N'${Remark3}', UserID=N'${UserID}'
+      WHERE SlabCode='${SlabCode}';
+    `;
+  sql.query(query, (err, result) => {
+    if (err) {
+      console.log('Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    } else {
+      if (result.rowsAffected && result.rowsAffected[0] > 0) {
+        res.json({
+          message: 'Slab updated successfully',
+          SlabCode: SlabCode,
+          Slab,
+          Distance,
+          Remark1,
+          Remark2,
+          Remark3,
+          UserID,
+        });
+      } else {
+        res.status(404).json({ error: 'Record not found' });
+      }
+    }
+  });
+});
+
+// DELETE a slab
+app.delete('/api/slab/:SlabCode', async (req, res) => {
+  const { SlabCode } = req.params;
+  const UserName = req.headers['username'];
+
+  try {
+    // Fetch user permissions from the database based on the user making the request
+    const userPermissionsQuery = `SELECT AllowMasterDelete FROM Users WHERE UserName='${UserName}'`;
+
+    sql.query(userPermissionsQuery, async (userErr, userResults) => {
+      if (userErr) {
+        console.log('Error fetching user permissions:', userErr);
+        res.status(500).json({ error: 'Internal server error' });
+        return;
+      }
+
+      // Check if user results are not empty
+      if (userResults.recordset && userResults.recordset.length > 0) {
+        // Check if user has permission to delete entries
+        const { AllowMasterDelete } = userResults.recordset[0];
+
+        if (AllowMasterDelete === 1) {
+          // The user has permission to delete entries
+          const deleteQuery = `DELETE FROM SlabMaster WHERE SlabCode='${SlabCode}'`;
+
+          sql.query(deleteQuery, (deleteErr) => {
+            if (deleteErr) {
+              console.log('Error deleting entry:', deleteErr);
+              res.status(500).json({ error: 'Internal server error' });
+            } else {
+              res.json({ message: 'Slab deleted successfully' });
+            }
+          });
+        } else {
+          // User does not have permission to delete entries
+          res.status(403).json({ error: 'Permission denied. You do not have the necessary permissions to delete entries.' });
+        }
+      } else {
+        // User not found in the database
+        res.status(404).json({ error: 'User not found.' });
+      }
+    });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+
+// For DeductionEntry
+
+// Add DeductionEntry
+app.post('/api/DeductionEntry/:EntryNo', (req, res) => {
+  const entryNo = req.params.EntryNo;
+  const requestData = req.body;
+  const values = requestData.map(entry => `(
+    ${entryNo}, 
+    '${entry.TrDate}', 
+    ${entry.LocationCode},
+    ${entry.DeductionTypeCode},
+    ${entry.DieselCompanyCode},
+    '${entry.BillNo}',
+    ${entry.Qty},
+    ${entry.Amount},
+    '${entry.Remark1}',
+    ${entry.UserID}
+    )`).join(',');
+
+  let query = `
+    DELETE FROM DeductionEntry WHERE EntryNo = ${entryNo};
+
+    INSERT INTO DeductionEntry (
+      EntryNo,
+      TrDate,
+      LocationCode,
+      DeductionTypeCode,
+      DieselCompanyCode,
+      BillNo,
+      Qty,
+      Amount,
+      Remark1,
+      UserID
+    ) VALUES ${values};`;
+
+  sql.query(query, (err, result) => {
+      if (err) {
+          console.log('Error:', err);
+          console.log('query:', query);
+          res.status(500).json({ error: 'Internal server error' });
+      } else {
+          res.json({ message: 'Data saved successfully' });
+      }
+  });
+});
+
+// Delete DeductionEntry
+app.delete('/api/DeductionEntry/:EntryNo', async (req, res) => {
+  const EntryNo = req.params.EntryNo;
+  const UserName = req.headers['username'];
+
+  try {
+    // Fetch user permissions from the database based on the user making the request
+    const userPermissionsQuery = `SELECT AllowEntryDelete FROM Users WHERE UserName='${UserName}'`;
+
+    sql.query(userPermissionsQuery, async (userErr, userResults) => {
+      if (userErr) {
+        console.log('Error fetching user permissions:', userErr);
+        res.status(500).json({ error: 'Internal server error' });
+        return;
+      }
+
+      // Check if user results are not empty
+      if (userResults.recordset && userResults.recordset.length > 0) {
+        // Check if user has permission to delete entries
+        const { AllowEntryDelete } = userResults.recordset[0];
+
+        if (AllowEntryDelete === 1) {
+          // The user has permission to delete entries
+          const query = `DELETE FROM DeductionEntry WHERE EntryNo = ${EntryNo}`;
+
+          try {
+            await sql.query(query);
+            res.json({ message: 'Success' });
+          } catch (error) {
+            console.log('Error:', error);
+            res.status(500).json({ error: 'Internal server error' });
+          }
+        } else {
+          // User does not have permission to delete entries
+          res.status(403).json({ error: 'Permission denied. You do not have the necessary permissions to delete entries.' });
+        }
+      } else {
+        // User not found in the database
+        res.status(404).json({ error: 'User not found.' });
+      }
+    });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}); 
+
