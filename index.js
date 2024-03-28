@@ -6127,8 +6127,8 @@ app.get('/api/stockStatement', (req, res) => {
           @CompCode = @CompCode,
           @DeptCode = @DeptCode,
           @YearCode = @YearCode,
-          @ItCode =  @ItCode,
           @Trdate = @Trdate;
+          
   
       SELECT 'Return Value' = @return_value;`;
 
@@ -6136,7 +6136,7 @@ app.get('/api/stockStatement', (req, res) => {
   request.input('CompCode', sql.Int, CompCode);
   request.input('DeptCode', sql.Int, DeptCode);
   request.input('YearCode', sql.Int, YearCode);
-  request.input('ItCode', sql.Int, itemCode);
+  
   request.input('Trdate', sql.NVarChar, endDate);
 
   request.query(query, (err, result) => {
@@ -6148,25 +6148,32 @@ app.get('/api/stockStatement', (req, res) => {
     }
   });
 });
+
 
 app.get('/api/stockLedger', (req, res) => {
-  const { CompCode, DeptCode, YearCode, endDate } = req.query;
-  const query = `
-      DECLARE @return_value int;
-  
-      EXEC @return_value = [dbo].[ProcItemLedger]
-          @CompCode = @CompCode,
-          @DeptCode = @DeptCode,
-          @YearCode = @YearCode,
-          @Trdate = @Trdate;
-  
-      SELECT 'Return Value' = @return_value;`;
+  const { CompCode, DeptCode, YearCode, endDate, itemCode } = req.query;
+
+  let query = `
+    DECLARE @return_value int;
+
+    EXEC @return_value = [dbo].[ProcItemLedger]
+        @CompCode = @CompCode,
+        @DeptCode = @DeptCode,
+        @YearCode = @YearCode,
+        @Trdate = @Trdate,
+        @ItCode = @Itcode`;
+
+
+  query += `;
+    SELECT 'Return Value' = @return_value;`;
 
   const request = new sql.Request();
   request.input('CompCode', sql.Int, CompCode);
   request.input('DeptCode', sql.Int, DeptCode);
   request.input('YearCode', sql.Int, YearCode);
   request.input('Trdate', sql.NVarChar, endDate);
+  request.input('Itcode', sql.NVarChar, itemCode);
+
 
   request.query(query, (err, result) => {
     if (err) {
@@ -6177,6 +6184,9 @@ app.get('/api/stockLedger', (req, res) => {
     }
   });
 });
+
+
+
 
 //for start and endDate
 //   app.get('/api/trialbalance', (req, res) => {
@@ -6260,7 +6270,7 @@ app.get('/api/ViewTranEntries', (req, res) => {
 app.get('/api/viewBillRegister', (req, res) => {
   const { ledgerCode, startDate, endDate, flag, subledgerCode } = req.query;
   console.log("View Bill Register : ",{ ledgerCode, startDate, endDate, flag });
-  const query = `select * from ViewBillRegister where  TRDATE >= @StartDate AND TRDATE <= @EndDate AND Flag =@flag;`;
+  const query = `SELECT * FROM ViewBillRegister WHERE  TRDATE >= @StartDate AND TRDATE <= @EndDate AND Flag =@flag ORDER BY ENTRYNO ;`;
   const request = new sql.Request();
   request.input('Accode', sql.Int, ledgerCode);
   request.input('StartDate', sql.NVarChar, startDate);
@@ -6290,7 +6300,6 @@ app.get('/api/employee', (req, res) => {
     }
   });
 });
-
 
 
 //Aadhar Upload
@@ -9166,4 +9175,3 @@ app.delete('/api/DeductionEntry/:EntryNo', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 }); 
-
