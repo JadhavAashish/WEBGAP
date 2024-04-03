@@ -4969,9 +4969,9 @@ app.delete('/api/tranentries/:entryNo/:flag', async (req, res) => {
       // Check if user results are not empty
       if (userResults.recordset && userResults.recordset.length > 0) {
         // Check if user has permission to delete entries
-        const { AllowMasterDelete } = userResults.recordset[0];
+        const { AllowEntryDelete } = userResults.recordset[0];
 
-        if (AllowMasterDelete === 1) {
+        if (AllowEntryDelete == 1) {
           // The user has permission to delete entries
           const deleteQuery = `DELETE FROM TranEntry WHERE EntryNo='${entryNo}' AND Flag='${flag}'`;
 
@@ -5029,9 +5029,9 @@ app.delete('/api/Newtranentries/:uniqueCode/:UserID', async (req, res) => {
       // Check if user results are not empty
       if (userResults.recordset && userResults.recordset.length > 0) {
         // Check if user has permission to delete entries
-        const { AllowMasterDelete } = userResults.recordset[0];
+        const { AllowEntryDelete } = userResults.recordset[0];
 
-        if (AllowMasterDelete === 1) {
+        if (AllowEntryDelete === 1) {
           // The user has permission to delete entries
           const deleteQuery = `DELETE FROM TranEntryTempSub WHERE COMPUTERID='${uniqueCode}' AND UserID='${UserID}'`;
 
@@ -9175,3 +9175,4 @@ app.delete('/api/DeductionEntry/:EntryNo', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 }); 
+
