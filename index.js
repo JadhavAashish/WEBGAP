@@ -8,8 +8,6 @@ const path = require('path');
 const multer = require('multer');
 const AWS = require('aws-sdk');
 const { v4: uuidv4 } = require('uuid');
-const { PutObjectCommand, S3Client } = require('@aws-sdk/client-s3');
-const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
 
 const app = express();
@@ -613,7 +611,7 @@ app.delete('/api/deleteUser/:UserName', (req, res) => {
 // For AcGroupMaster
 // GET all AcGroupMaster entries
 app.get('/api/acgroups', (req, res) => {
-  const query = 'SELECT * FROM AcGroupMaster';
+  const query = 'SELECT * FROM AcGroupMaster ORDER BY AcGroupCode ASC; ';
   sql.query(query, (err, result) => {
     if (err) {
       console.log('Error:', err);
@@ -5145,10 +5143,10 @@ app.post('/api/SaveBillentries', async (req, res) => {
       FROM Billsub AS TE
       WHERE TE.EntryNo = '${operation === 'update' ? entryNo : maxEntryNo + 1}' AND TE.Flag = '${flag}' AND TE.DeptCode = '${DeptCode}' AND TE.YearCode = '${YearCode}'  AND TE.CompCode = '${CompCode}';
 
-      INSERT INTO Billsub (TRDATE, Flag, AcCode, ItCode, BillNo, BillDate, Desc1, Desc2, MRP, Qty, Rate, Amount, DiscAmt, TaxableAmt, GstRateCode, GstRate, CGstAmt, SGstAmt, IGstAmt, RoundOff, NetAmt, ENTRYNO, YearCode, DeptCode, CompCode, USERID, COMPUTERID)
+      INSERT INTO Billsub (TRDATE, Flag, AcCode, ItCode, BillNo, BillDate, Desc1, Desc2, MRP, Qty, Rate, Amount, DiscAmt, TaxableAmt, GstRateCode, GstRate, CGstAmt, SGstAmt, IGstAmt, RoundOff, NetAmt, Narr,ADDOTHERAMT, LESSOTHERAMT, ENTRYNO, YearCode, DeptCode, CompCode, USERID, COMPUTERID)
       SELECT  
       '${trDate}',Flag,'${AcCode}',ItCode,'${BillNo}','${BillDate}','${Desc1}','${Desc2}', MRP,Qty,Rate,Amount,DiscAmt,TaxableAmt,GstRateCode,GstRate,CGstAmt,SGstAmt,IGstAmt,RoundOff,
-       NetAmt,'${operation === 'update' ? entryNo : maxEntryNo + 1}', YearCode,DeptCode,CompCode,USERID,COMPUTERID
+       NetAmt, Narr, ADDOTHERAMT, LESSOTHERAMT ,'${operation === 'update' ? entryNo : maxEntryNo + 1}', YearCode,DeptCode,CompCode,USERID,COMPUTERID
       FROM BillsubTemp;
 
       DELETE TETS
@@ -5399,6 +5397,9 @@ app.post('/api/sellentriesPost', (req, res) => {
     IGstAmt,
     RoundOff,
     NetAmt,
+    Narration,
+    AddOtherAmt,
+    LessOtherAmt,
     DeptCode,
     YearCode,
     CompCode,
@@ -5406,10 +5407,47 @@ app.post('/api/sellentriesPost', (req, res) => {
     uniqueCode
   } = req.body;
 
+console.log("Add Oher Amt ",{
+  flag,
+  entryNo,
+  trDate,
+  AcCode,
+  ItCode,
+  BillNo,
+  BillDate,
+  Desc1,
+  Desc2,
+  MRP,
+  Qty,
+  Rate,
+  Amount,
+  DiscAmt,
+  TaxableAmt,
+  GstRateCode,
+  GstRate,
+  CGstAmt,
+  SGstAmt,
+  IGstAmt,
+  RoundOff,
+  NetAmt,
+  Narration,
+  AddOtherAmt,
+  LessOtherAmt,
+  DeptCode,
+  YearCode,
+  CompCode,
+  USERID,
+  uniqueCode
+});
 
-  let query = `
-      INSERT INTO BillsubTemp (flag, EntryNo, TrDate, AcCode, ItCode, BillNo, BillDate, Desc1, Desc2,  MRP, Qty, Rate, Amount, DiscAmt, TaxableAmt, GSTRateCode, GstRate, CGSTAmt, SGSTAmt, IGSTAmt, RoundOff, NetAmt, DeptCode, YearCode, CompCode, USERID, COMPUTERID) 
-      VALUES ('${flag}','${entryNo}', '${trDate}', ${AcCode}, '${ItCode}','${BillNo}','${BillDate}','${Desc1}','${Desc2}',  '${MRP}', '${Qty}', '${Rate}', '${Amount}', '${DiscAmt}', '${TaxableAmt}', '${GstRateCode}','${GstRate}', '${CGstAmt}', '${SGstAmt}', '${IGstAmt}', '${RoundOff}','${NetAmt}','${DeptCode}','${YearCode}',${CompCode},${USERID},${uniqueCode})`;
+  /* let query = `
+      INSERT INTO BillsubTemp (flag, EntryNo, TrDate, AcCode, ItCode, BillNo, BillDate, Desc1, Desc2,  MRP, Qty, Rate, Amount, DiscAmt, TaxableAmt, GSTRateCode, GstRate, CGSTAmt, SGSTAmt, IGSTAmt, RoundOff, NetAmt, Narr, ADDOTHERAMT, LESSOTHERAMT, DeptCode, YearCode, CompCode, USERID, COMPUTERID) 
+      VALUES ('${flag}','${entryNo}', '${trDate}', ${AcCode}, '${ItCode}','${BillNo}','${BillDate}','${Desc1}','${Desc2}',  '${MRP}', '${Qty}', '${Rate}', '${Amount}', '${DiscAmt}', '${TaxableAmt}', '${GstRateCode}','${GstRate}', '${CGstAmt}', '${SGstAmt}', '${IGstAmt}', '${RoundOff}','${NetAmt}','${Narration}', ${AddOtherAmt}, ${LessOtherAmt},'${DeptCode}','${YearCode}',${CompCode},${USERID},${uniqueCode})`;
+ */
+
+      let query = `
+      INSERT INTO BillsubTemp (flag, EntryNo, TrDate, AcCode, ItCode, BillNo, BillDate, Desc1, Desc2,  MRP, Qty, Rate, Amount, DiscAmt, TaxableAmt, GSTRateCode, GstRate, CGSTAmt, SGSTAmt, IGSTAmt, RoundOff, NetAmt, Narr, ADDOTHERAMT, LESSOTHERAMT, DeptCode, YearCode, CompCode, USERID, COMPUTERID) 
+      VALUES ('${flag}','${entryNo}', '${trDate}', ${AcCode}, '${ItCode}','${BillNo}','${BillDate}','${Desc1}','${Desc2}',  '${MRP}', '${Qty}', '${Rate}', '${Amount}', '${DiscAmt}', '${TaxableAmt}', '${GstRateCode}','${GstRate}', '${CGstAmt}', '${SGstAmt}', '${IGstAmt}', '${RoundOff}','${NetAmt}','${Narration}', '${AddOtherAmt}', '${LessOtherAmt}','${DeptCode}','${YearCode}',${CompCode},${USERID},${uniqueCode})`;
 
   sql.query(query, (err) => {
     if (err) {
@@ -5431,8 +5469,8 @@ app.post('/api/insertDataAndFlag', (req, res) => {
   const query = `
       DELETE FROM BillsubTemp;
 
-      INSERT INTO BillsubTemp (flag, EntryNo, TrDate, AcCode, ItCode, BillNo, BillDate, Desc1, Desc2,  MRP, Qty, Rate, Amount, DiscAmt, TaxableAmt, GSTRateCode, GstRate, CGSTAmt, SGSTAmt, IGSTAmt, RoundOff, NetAmt, DeptCode ,YearCode, USERID ,CompCode,COMPUTERID)
-      SELECT flag, EntryNo, TrDate, AcCode, ItCode, BillNo, BillDate, Desc1, Desc2,  MRP, Qty, Rate, Amount, DiscAmt, TaxableAmt, GSTRateCode, GstRate, CGSTAmt, SGSTAmt, IGSTAmt, RoundOff, NetAmt, DeptCode , YearCode ,USERID ,CompCode,COMPUTERID
+      INSERT INTO BillsubTemp (flag, EntryNo, TrDate, AcCode, ItCode, BillNo, BillDate, Desc1, Desc2,  MRP, Qty, Rate, Amount, DiscAmt, TaxableAmt, GSTRateCode, GstRate, CGSTAmt, SGSTAmt, IGSTAmt, RoundOff, NetAmt, ADDOTHERAMT, LESSOTHERAMT, DeptCode ,YearCode, USERID ,CompCode,COMPUTERID)
+      SELECT flag, EntryNo, TrDate, AcCode, ItCode, BillNo, BillDate, Desc1, Desc2,  MRP, Qty, Rate, Amount, DiscAmt, TaxableAmt, GSTRateCode, GstRate, CGSTAmt, SGSTAmt, IGSTAmt, RoundOff, NetAmt, ADDOTHERAMT, LESSOTHERAMT, DeptCode , YearCode ,USERID ,CompCode,COMPUTERID
       FROM Billsub
       WHERE EntryNo = @entryNo AND Flag = @flag  AND DeptCode = @DeptCode  AND YearCode = @YearCode  AND CompCode = @CompCode;
     `;
@@ -5483,7 +5521,7 @@ app.put('/api/NewSaleEntries/:entryNo/:uniqueCode/:flag', (req, res) => {
   // Always update TranEntryTempSub
   const updateQuery = `
       UPDATE BillSubTemp
-      SET TrDate='${trDate}', AcCode='${AcCode}', ItCode='${ItCode}',BillNo='${BillNo}',BillDate='${BillDate}',Desc1='${Desc1}',Desc2='${Desc2}', MRP='${MRP}', Qty='${Qty}', Rate='${Rate}', Amount='${Amount}', DiscAmt='${DiscAmt}', TaxableAmt='${TaxableAmt}', GstRateCode='${GstRateCode}',GstRate='${GstRate}', CGstAmt='${CGstAmt}', SGstAmt='${SGstAmt}', IGstAmt='${IGstAmt}',RoundOff='${RoundOff}', NetAmt='${NetAmt}'  WHERE ENTRYNO=${entryNo} AND COMPUTERID=${uniqueCode} AND Flag='${flag}' ;`;
+      SET TrDate='${trDate}', AcCode='${AcCode}', ItCode='${ItCode}',BillNo='${BillNo}',BillDate='${BillDate}',Desc1='${Desc1}',Desc2='${Desc2}', MRP='${MRP}', Qty='${Qty}', Rate='${Rate}', Amount='${Amount}', DiscAmt='${DiscAmt}', TaxableAmt='${TaxableAmt}', GstRateCode='${GstRateCode}',GstRate='${GstRate}', CGstAmt='${CGstAmt}', SGstAmt='${SGstAmt}', IGstAmt='${IGstAmt}',RoundOff='${RoundOff}', NetAmt='${NetAmt}', ADDOTHERAMT='${AddOtherAmt}', LESSOTHERAMT='${LessOtherAmt}'  WHERE ENTRYNO=${entryNo} AND COMPUTERID=${uniqueCode} AND Flag='${flag}' ;`;
 
   // Execute the update query
   sql.query(updateQuery, (err, result) => {
