@@ -4682,8 +4682,9 @@ app.get('/api/distinct-tranentries/:flag/:dept/:year/:company', (req, res) => {
   const year = req.params.year;
   const company = req.params.company;
 
+
   const query = `
-      SELECT distinct EntryNo, TrDate, Flag
+      SELECT *
       FROM TranEntry
       WHERE Flag = @flag
         AND DeptCode = @dept
@@ -4706,7 +4707,7 @@ app.get('/api/distinct-tranentries/:flag/:dept/:year/:company', (req, res) => {
   });
 });
 
-app.get('/api/tranentries/:entryNo/:flag', (req, res) => {
+/* app.get('/api/tranentries/:entryNo/:flag', (req, res) => {
   const entryNo = req.params.entryNo; // Get the entry number from the URL
   const flag = req.params.flag; // Get the "flag" from the URL parameters
 
@@ -4728,7 +4729,7 @@ app.get('/api/tranentries/:entryNo/:flag', (req, res) => {
       res.json(result.recordset);
     }
   });
-});
+}); */
 
 app.get('/api/tranNewEntries', (req, res) => {
   const { UserId } = req.query;
@@ -4743,7 +4744,7 @@ app.get('/api/tranNewEntries', (req, res) => {
   });
 })
 
-app.post('/api/Savetranentries', async (req, res) => {
+/* app.post('/api/Savetranentries', async (req, res) => {
   const { flag, DeptCode, YearCode, CompCode, entryNo, operation } = req.body;
   // Get the latest max entry number for the given flag
   const getMaxEntryNoQuery = `
@@ -4779,8 +4780,77 @@ app.post('/api/Savetranentries', async (req, res) => {
       res.json({ message: 'Data saved and deleted successfully' });
     }
   });
-});
+}); */
 
+/* app.post('/api/Savetranentries', async (req, res) => {
+  const { flag,DeptCode,YearCode,CompCode, entryNo,operation,requestData} = req.body;
+
+  const getMaxEntryNoQuery = `
+  SELECT MAX(CAST(EntryNo AS INT)) AS MaxEntryNo
+  FROM TranEntry
+  WHERE Flag = '${flag}'AND DeptCode = ${DeptCode} AND YearCode = ${YearCode} AND CompCode = ${CompCode}`;
+  console.log("getMaxEntryNoQuery",getMaxEntryNoQuery);
+  const maxEntryNoResult = await sql.query(getMaxEntryNoQuery);
+  const maxEntryNo = maxEntryNoResult.recordset[0]?.MaxEntryNo || 0;
+  console.log("maxEntryNo",maxEntryNo);
+  console.log("maxEntryNo",maxEntryNo + 1);
+
+  const values = requestData.map(entry => `(
+    '${operation === 'update' ? entry.EntryNo : maxEntryNo + 1}', 
+    '${entry.TrDate}', 
+    '${entry.Flag}',
+    '${entry.AcCode}',
+    '${entry.SubAcCode}',
+    ${entry.CrAmt},
+    ${entry.DrAmt},
+    '${entry.ChqNo}',
+    '${entry.Narration1}',
+    '${entry.Narration2}',
+    '${entry.Narration3}',
+    '${entry.SubLedgerGroupCode}',
+    '${entry.DeptCode}',
+    '${entry.YearCode}',
+    '${entry.CompCode}',
+    '${entry.UserID}',
+    '${entry.uniqueCode ? entry.uniqueCode : entry.COMPUTERID}'
+    )`).join(',');  
+  // Assuming you have access to a SQL instance through a 'sql' object
+  const query = `
+  DELETE TE
+  FROM TranEntry AS TE
+  WHERE TE.EntryNo = ${operation === 'update' ? entryNo : maxEntryNo + 1} AND TE.Flag = '${flag}' AND TE.DeptCode = '${DeptCode}' AND TE.YearCode = '${YearCode}'  AND TE.CompCode = '${CompCode}';
+
+    INSERT INTO TranEntry (
+      EntryNo,
+      TrDate,
+      Flag,
+      AcCode,
+      SubAcCode,
+      CrAmt,
+      DrAmt,
+      ChqNo,
+      Narration1,
+      Narration2,
+      Narration3,
+      SubLedgerGroupCode,
+      DeptCode,
+      YearCode,
+      CompCode,
+      UserID,
+      COMPUTERID
+    ) VALUES ${values};`;
+
+  sql.query(query, (err, result) => {
+    if (err) {
+      console.log('Error:', err);
+      console.log('query:', query);
+      res.status(500).json({ error: 'Internal server error' });
+    } else {
+      res.json({ message: 'Data saved successfully' });
+    }
+  });
+});
+ */
 app.post('/api/tranentriesPost', (req, res) => {
   const {
     entryNo,
@@ -5123,19 +5193,139 @@ app.delete('/api/cleartranEntryTemp', (req, res) => {
 });
 
 
+//Tran Entry new Array API
+app.post('/api/Savetranentries', async (req, res) => {
+  const { flag, DeptCode, YearCode, CompCode, entryNo, operation, requestData} = req.body;
+
+  const getMaxEntryNoQuery = `
+  SELECT MAX(CAST(EntryNo AS INT)) AS MaxEntryNo
+  FROM TranEntry
+  WHERE Flag = '${flag}'AND DeptCode = ${DeptCode} AND YearCode = ${YearCode} AND CompCode = ${CompCode}`;
+  console.log("getMaxEntryNoQuery",getMaxEntryNoQuery);
+  const maxEntryNoResult = await sql.query(getMaxEntryNoQuery);
+  const maxEntryNo = maxEntryNoResult.recordset[0]?.MaxEntryNo || 0;
+  console.log("maxEntryNo",maxEntryNo);
+  console.log("maxEntryNo",maxEntryNo + 1);
+
+  const values = requestData.map(entry => `(
+    '${operation === 'update' ? entry.EntryNo : maxEntryNo + 1}', 
+    '${entry.TrDate}', 
+    '${entry.Flag}',
+    '${entry.AcCode}',
+    '${entry.SubAcCode}',
+    ${entry.CrAmt},
+    ${entry.DrAmt},
+    '${entry.ChqNo}',
+    '${entry.Narration1}',
+    '${entry.Narration2}',
+    '${entry.Narration3}',
+    '${entry.SubLedgerGroupCode}',
+    '${entry.DeptCode}',
+    '${entry.YearCode}',
+    '${entry.CompCode}',
+    '${entry.UserID}',
+    '${entry.uniqueCode ? entry.uniqueCode : entry.COMPUTERID}'
+    )`).join(',');  
+  // Assuming you have access to a SQL instance through a 'sql' object
+  const query = `
+  DELETE TE
+  FROM TranEntry AS TE
+  WHERE TE.EntryNo = ${operation === 'update' ? entryNo : maxEntryNo + 1} AND TE.Flag = '${flag}' AND TE.DeptCode = '${DeptCode}' AND TE.YearCode = '${YearCode}'  AND TE.CompCode = '${CompCode}';
+
+    INSERT INTO TranEntry (
+      EntryNo,
+      TrDate,
+      Flag,
+      AcCode,
+      SubAcCode,
+      CrAmt,
+      DrAmt,
+      ChqNo,
+      Narration1,
+      Narration2,
+      Narration3,
+      SubLedgerGroupCode,
+      DeptCode,
+      YearCode,
+      CompCode,
+      UserID,
+      COMPUTERID
+    ) VALUES ${values};`;
+
+  sql.query(query, (err, result) => {
+    if (err) {
+      console.log('Error:', err);
+      console.log('query:', query);
+      res.status(500).json({ error: 'Internal server error' });
+    } else {
+      res.json({ message: 'Data saved successfully' });
+    }
+  });
+});
+
+
 //Billsub Entry ------------------------------------------------------------------------------------
 
-app.post('/api/SaveBillentries', async (req, res) => {
-  const { flag, DeptCode, YearCode, CompCode, trDate, AcCode, BillNo, BillDate, Desc1, Desc2, operation, entryNo, RoundOff, TotNetAmt, TotIGST, TotCGST, TotSGST, GrossTotAmt, UserID } = req.body;
+/* app.post('/api/billentry', async (req, res) => {
+  //const { flag, DeptCode, YearCode, CompCode, trDate, AcCode, BillNo, BillDate, Desc1, Desc2, operation, entryNo, RoundOff, TotNetAmt, TotIGST, TotCGST, TotSGST, GrossTotAmt, UserID } = req.body;
+  const { flag, DeptCode, YearCode, CompCode, entryNo, operation, requestData} = req.body;
+
   // Get the latest max entry number for the given flag
   const getMaxEntryNoQuery = `
       SELECT MAX(ENTRYNO) AS MaxEntryNo
       FROM Billsub
-      WHERE Flag = '${flag}'AND DeptCode = '${DeptCode}'AND YearCode = '${YearCode}' AND CompCode = '${CompCode}'`;
-  console.log("getMaxEntryNoQuery", getMaxEntryNoQuery);
-  const maxEntryNoResult = await sql.query(getMaxEntryNoQuery);
-  const maxEntryNo = maxEntryNoResult.recordset[0]?.MaxEntryNo || 0;
-  console.log("maxEntryNo", maxEntryNo);
+      WHERE Flag = '${flag}' AND DeptCode = '${DeptCode}'AND YearCode = '${YearCode}' AND CompCode = '${CompCode}'`;
+    console.log("getMaxEntryNoQuery", getMaxEntryNoQuery);
+    const maxEntryNoResult = await sql.query(getMaxEntryNoQuery);
+    const maxEntryNo = maxEntryNoResult.recordset[0]?.MaxEntryNo || 0;
+    console.log("maxEntryNo", maxEntryNo);
+
+  // Extracting necessary values from the first entry in requestData
+  const firstEntry = requestData.length > 0 ? requestData[0] : null;
+  const TRDATE = firstEntry ? (firstEntry.TRDATE instanceof Date ? firstEntry.TRDATE.toISOString() : null) : null;
+  const ACCODE = firstEntry ? firstEntry.ACCODE : null;
+  const BILLNO = firstEntry ? firstEntry.BILLNO : null;
+  const BILLDATE = firstEntry ? firstEntry.BILLDATE : null;
+  const NETAMT = firstEntry ? firstEntry.NETAMT : null;
+  const TAXABLEAMT = firstEntry ? firstEntry.TAXABLEAMT : null;
+  const CGSTAMT = firstEntry ? firstEntry.CGSTAMT : null;
+  const SGSTAMT = firstEntry ? firstEntry.SGSTAMT : null;
+  const IGSTAMT = firstEntry ? firstEntry.IGSTAMT : null;
+  const ROUNDOFF = firstEntry ? firstEntry.ROUNDOFF : null;
+  const USERID = firstEntry ? firstEntry.USERID : null;
+
+    const values = requestData.map(entry => `(
+      '${operation === 'update' ? entry.ENTRYNO : maxEntryNo + 1}', 
+      ${entry.TRDATE instanceof Date ? `'${entry.TRDATE.toISOString()}'` : 'NULL'}
+      '${entry.FLAG}',
+      '${entry.ACCODE}',
+      '${entry.ITCODE}',
+      '${entry.BILLNO}',
+      ${entry.BILLDATE instanceof Date ? `'${entry.BILLDATE.toISOString()}'` : 'NULL'}
+      '${entry.DESC1}',
+      '${entry.DESC2}',
+      '${entry.MRP}',
+      '${entry.QTY}',
+      '${entry.RATE}',
+      '${entry.AMOUNT}',
+      '${entry.DISCAMT}', 
+      '${entry.TAXABLEAMT}',
+      '${entry.GSTRATECODE}',
+      '${entry.GSTRATE}',
+      '${entry.CGSTAMT}',
+      '${entry.SGSTAMT}',
+      '${entry.IGSTAMT}',
+      '${entry.ROUNDOFF}',
+      '${entry.NETAMT}',
+      '${entry.NARR}',
+      '${entry.ADDOTHERAMT}',
+      '${entry.LESSOTHERAMT}',
+      '${entry.DeptCode}',
+      '${entry.YearCode}',
+      '${entry.CompCode}',
+      '${entry.USERID}',
+      '${entry.uniqueCode ? entry.uniqueCode : entry.COMPUTERID}'
+      )`).join(','); 
 
   // SQL query to insert data into TranEntry and delete from TranEntryTempSub
   let query = `
@@ -5143,19 +5333,13 @@ app.post('/api/SaveBillentries', async (req, res) => {
       FROM Billsub AS TE
       WHERE TE.EntryNo = '${operation === 'update' ? entryNo : maxEntryNo + 1}' AND TE.Flag = '${flag}' AND TE.DeptCode = '${DeptCode}' AND TE.YearCode = '${YearCode}'  AND TE.CompCode = '${CompCode}';
 
-      INSERT INTO Billsub (TRDATE, Flag, AcCode, ItCode, BillNo, BillDate, Desc1, Desc2, MRP, Qty, Rate, Amount, DiscAmt, TaxableAmt, GstRateCode, GstRate, CGstAmt, SGstAmt, IGstAmt, RoundOff, NetAmt, Narr,ADDOTHERAMT, LESSOTHERAMT, ENTRYNO, YearCode, DeptCode, CompCode, USERID, COMPUTERID)
-      SELECT  
-      '${trDate}',Flag,'${AcCode}',ItCode,'${BillNo}','${BillDate}','${Desc1}','${Desc2}', MRP,Qty,Rate,Amount,DiscAmt,TaxableAmt,GstRateCode,GstRate,CGstAmt,SGstAmt,IGstAmt,RoundOff,
-       NetAmt, Narr, ADDOTHERAMT, LESSOTHERAMT ,'${operation === 'update' ? entryNo : maxEntryNo + 1}', YearCode,DeptCode,CompCode,USERID,COMPUTERID
-      FROM BillsubTemp;
-
-      DELETE TETS
-      FROM BillsubTemp AS TETS
-      WHERE TETS.EntryNo = '${operation === 'update' ? entryNo : maxEntryNo + 1}' AND TETS.Flag = '${flag}'AND TETS.DeptCode = '${DeptCode}' AND TETS.YearCode = '${YearCode}'  AND TETS.CompCode = '${CompCode}';
+      INSERT INTO Billsub (ENTRYNO, TRDATE, FLAG, ACCODE, ITCODE, BILLNO, BILLDATE, DESC1, DESC2, MRP, QTY, RATE, AMOUNT, DISCAMT, TAXABLEAMT, GSTRATECODE, GSTRATE, CGSTAMT, SGSTAMT, IGSTAMT, ROUNDOFF, NETAMT, NARR, ADDOTHERAMT, LESSOTHERAMT, DeptCode, YearCode, CompCode, USERID, COMPUTERID)
+      Values ${values};
       
       delete from billentry where EntryNo = '${operation === 'update' ? entryNo : maxEntryNo + 1}' AND Flag = '${flag}' AND DeptCode = '${DeptCode}' AND YearCode = '${YearCode}'  AND CompCode = '${CompCode}';
-        INSERT INTO BillEntry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, billno, billdate, TaxableAmt, CgstAmt, SgstAmt, IgstAmt, RoundOff, NetAmt)
-        VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${UserID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', '${trDate}', '${AcCode}', '${AcCode}', '${BillNo}',' ${BillDate}', '${GrossTotAmt}','${TotCGST}', '${TotSGST}','${TotIGST}','${RoundOff}', '${TotNetAmt}');`
+        
+      INSERT INTO BillEntry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, billno, billdate, TaxableAmt, CgstAmt, SgstAmt, IgstAmt, RoundOff, NetAmt)
+      VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${USERID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', '${TRDATE}', '${ACCODE}', '${ACCODE}', '${BILLNO}',' ${BILLDATE}', '${TAXABLEAMT}','${CGSTAMT}', '${SGSTAMT}','${IGSTAMT}','${ROUNDOFF}', '${NETAMT}');`
   if (flag === 'S' || flag === 'PR') {
     // Additional code to run when flag is 'P' or 'S'
     query += `
@@ -5163,26 +5347,26 @@ app.post('/api/SaveBillentries', async (req, res) => {
           WHERE EntryNo = '${operation === 'update' ? entryNo : maxEntryNo + 1}' AND Flag = '${flag}' AND DeptCode = '${DeptCode}' AND YearCode = '${YearCode}' AND CompCode = '${CompCode}';
     
           INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, DrAmt,CrAmt)
-          VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${UserID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', '${trDate}','${AcCode}', '${AcCode}','${TotNetAmt}',0);
+          VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${USERID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', '${TRDATE}','${ACCODE}', '${ACCODE}','${NETAMT}',0);
     
     
           INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, CrAmt,DrAmt)
-          VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${UserID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${trDate}', 4,0,'${GrossTotAmt}',0);
+          VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${USERID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${TRDATE}', 4,0,'${TAXABLEAMT}',0);
     
     
           INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, CrAmt,DrAmt)
-          VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${UserID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${trDate}', 7,0,'${TotCGST}',0);
+          VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${USERID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${TRDATE}', 7,0,'${CGSTAMT}',0);
     
     
           INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, CrAmt,DrAmt)
-          VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${UserID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${trDate}', 8,0,'${TotSGST}',0);
+          VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${USERID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${TRDATE}', 8,0,'${SGSTAMT}',0);
     
     
           INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, CrAmt,DrAmt)
-          VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${UserID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${trDate}', 9,0,'${TotIGST}',0);
+          VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${USERID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${TRDATE}', 9,0,'${IGSTAMT}',0);
           
           INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, DrAmt, CrAmt)
-          VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${UserID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${trDate}', 12,0,'${RoundOff < 0 ? -RoundOff : 0}','${RoundOff > 0 ? RoundOff : 0}');
+          VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${USERID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${TRDATE}', 12,0,'${ROUNDOFF < 0 ? -ROUNDOFF : 0}','${ROUNDOFF > 0 ? ROUNDOFF : 0}');
           `;
   }
   if (flag === 'P' || flag === 'SR') {
@@ -5192,27 +5376,27 @@ app.post('/api/SaveBillentries', async (req, res) => {
             WHERE EntryNo = '${operation === 'update' ? entryNo : maxEntryNo + 1}' AND Flag = '${flag}' AND DeptCode = '${DeptCode}' AND YearCode = '${YearCode}' AND CompCode = '${CompCode}';
             
             INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, CrAmt,DrAmt)
-            VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${UserID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', '${trDate}', '${AcCode}','${AcCode}','${TotNetAmt}',0);
+            VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${USERID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', '${TRDATE}', '${ACCODE}','${ACCODE}','${NETAMT}',0);
         
             
             INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, DrAmt,CrAmt)
-            VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${UserID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${trDate}', 3,0,'${GrossTotAmt}',0);
+            VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${USERID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${TRDATE}', 3,0,'${TAXABLEAMT}',0);
         
             
             INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, DrAmt,CrAmt)
-            VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${UserID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${trDate}', 7,0,'${TotCGST}',0);
+            VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${USERID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${TRDATE}', 7,0,'${CGSTAMT}',0);
         
             
             INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, DrAmt,CrAmt)
-            VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${UserID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${trDate}', 8,0,'${TotSGST}',0);
+            VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${USERID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${TRDATE}', 8,0,'${SGSTAMT}',0);
         
             
             INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, DrAmt,CrAmt)
-            VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${UserID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${trDate}', 9,0,'${TotIGST}',0);
+            VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${USERID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${TRDATE}', 9,0,'${IGSTAMT}',0);
         
             
             INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, CrAmt, DrAmt)
-            VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${UserID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${trDate}', 12,0,'${RoundOff < 0 ? -RoundOff : 0}','${RoundOff > 0 ? RoundOff : 0}');
+            VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${USERID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${TRDATE}', 12,0,'${ROUNDOFF < 0 ? -ROUNDOFF : 0}','${ROUNDOFF > 0 ? ROUNDOFF : 0}');
             `;
   }
   sql.query(query, (err) => {
@@ -5223,7 +5407,154 @@ app.post('/api/SaveBillentries', async (req, res) => {
       res.json({ message: 'Data saved and deleted successfully' });
     }
   });
+}); */
+
+app.post('/api/billentry', async (req, res) => {
+  const { flag, DeptCode, YearCode, CompCode, entryNo, operation, requestData} = req.body;
+
+  // Get the latest max entry number for the given flag
+  const getMaxEntryNoQuery = `
+      SELECT MAX(ENTRYNO) AS MaxEntryNo
+      FROM Billsub
+      WHERE Flag = '${flag}' AND DeptCode = '${DeptCode}'AND YearCode = '${YearCode}' AND CompCode = '${CompCode}'`;
+  console.log("getMaxEntryNoQuery", getMaxEntryNoQuery);
+  const maxEntryNoResult = await sql.query(getMaxEntryNoQuery);
+  const maxEntryNo = maxEntryNoResult.recordset[0]?.MaxEntryNo || 0;
+  console.log("maxEntryNo", maxEntryNo);
+
+  // Extracting necessary values from the first entry in requestData
+  const firstEntry = requestData.length > 0 ? requestData[0] : null;
+  const TRDATE = firstEntry ? (firstEntry.TRDATE ? new Date(firstEntry.TRDATE) : null) : null;
+  const ACCODE = firstEntry ? firstEntry.ACCODE : null;
+  const BILLNO = firstEntry ? firstEntry.BILLNO : null;
+  const BILLDATE = firstEntry ? (firstEntry.BILLDATE ? new Date(firstEntry.BILLDATE) : null) : null;
+  const NETAMT = firstEntry ? firstEntry.NETAMT : null;
+  const TAXABLEAMT = firstEntry ? firstEntry.TAXABLEAMT : null;
+  const CGSTAMT = firstEntry ? firstEntry.CGSTAMT : null;
+  const SGSTAMT = firstEntry ? firstEntry.SGSTAMT : null;
+  const IGSTAMT = firstEntry ? firstEntry.IGSTAMT : null;
+  const ROUNDOFF = firstEntry ? firstEntry.ROUNDOFF : null;
+  const USERID = firstEntry ? firstEntry.USERID : null;
+
+  const formatDate = (date) => {
+    if (!date) return 'NULL';
+    if (typeof date === 'string' && date.includes('T')) return `'${date}'`; // Already in ISO format
+    const formattedDate = new Date(date).toISOString().replace('T', ' ').replace(/\.\d{3}Z/, '');
+    return `'${formattedDate}'`;
+  };
+  
+  // Constructing the SQL query
+  const values = requestData.map(entry => `(
+      '${operation === 'update' ? entry.ENTRYNO : maxEntryNo + 1}', 
+      ${formatDate(entry.TRDATE)},
+      '${entry.FLAG}',
+      '${entry.ACCODE}',
+      '${entry.ITCODE}',
+      '${entry.BILLNO}',
+      ${formatDate(entry.BILLDATE)},
+      '${entry.DESC1}',
+      '${entry.DESC2}',
+      '${entry.MRP}',
+      '${entry.QTY}',
+      '${entry.RATE}',
+      '${entry.AMOUNT}',
+      '${entry.DISCAMT}', 
+      '${entry.TAXABLEAMT}',
+      '${entry.GSTRATECODE}',
+      '${entry.GSTRATE}',
+      '${entry.CGSTAMT}',
+      '${entry.SGSTAMT}',
+      '${entry.IGSTAMT}',
+      '${entry.ROUNDOFF}',
+      '${entry.NETAMT}',
+      '${entry.NARR}',
+      '${entry.ADDOTHERAMT}',
+      '${entry.LESSOTHERAMT}',
+      '${entry.DeptCode}',
+      '${entry.YearCode}',
+      '${entry.CompCode}',
+      '${entry.USERID}',
+      '${entry.uniqueCode ? entry.uniqueCode : entry.COMPUTERID}'
+  )`).join(',');
+
+  let query = `
+      DELETE TE
+      FROM Billsub AS TE
+      WHERE TE.EntryNo = '${operation === 'update' ? entryNo : maxEntryNo + 1}' AND TE.Flag = '${flag}' AND TE.DeptCode = '${DeptCode}' AND TE.YearCode = '${YearCode}'  AND TE.CompCode = '${CompCode}';
+
+      INSERT INTO Billsub (ENTRYNO, TRDATE, FLAG, ACCODE, ITCODE, BILLNO, BILLDATE, DESC1, DESC2, MRP, QTY, RATE, AMOUNT, DISCAMT, TAXABLEAMT, GSTRATECODE, GSTRATE, CGSTAMT, SGSTAMT, IGSTAMT, ROUNDOFF, NETAMT, NARR, ADDOTHERAMT, LESSOTHERAMT, DeptCode, YearCode, CompCode, USERID, COMPUTERID)
+      VALUES ${values};
+      
+      DELETE FROM billentry WHERE EntryNo = '${operation === 'update' ? entryNo : maxEntryNo + 1}' AND Flag = '${flag}' AND DeptCode = '${DeptCode}' AND YearCode = '${YearCode}'  AND CompCode = '${CompCode}';
+        
+      INSERT INTO BillEntry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, billno, billdate, TaxableAmt, CgstAmt, SgstAmt, IgstAmt, RoundOff, NetAmt)
+      VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${USERID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', ${formatDate(TRDATE)}, '${ACCODE}', '${ACCODE}', '${BILLNO}', ${formatDate(BILLDATE)}, '${TAXABLEAMT}', '${CGSTAMT}', '${SGSTAMT}', '${IGSTAMT}', '${ROUNDOFF}', '${NETAMT}');`;
+
+  // Additional code for flag 'S' or 'PR'
+  if (flag === 'S' || flag === 'PR') {
+    query += `
+      DELETE FROM Tranentry 
+      WHERE EntryNo = '${operation === 'update' ? entryNo : maxEntryNo + 1}' AND Flag = '${flag}' AND DeptCode = '${DeptCode}' AND YearCode = '${YearCode}' AND CompCode = '${CompCode}';
+    
+      INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, DrAmt, CrAmt)
+      VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${USERID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', ${formatDate(TRDATE)}, '${ACCODE}', '${ACCODE}', '${NETAMT}', 0);
+    
+      INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, CrAmt, DrAmt)
+      VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${USERID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', ${formatDate(TRDATE)}, 4, 0, '${TAXABLEAMT}', 0);
+    
+      INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, CrAmt, DrAmt)
+      VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${USERID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', ${formatDate(TRDATE)}, 7, 0, '${CGSTAMT}', 0);
+    
+      INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, CrAmt, DrAmt)
+      VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${USERID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', ${formatDate(TRDATE)}, 8, 0, '${SGSTAMT}', 0);
+    
+      INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, CrAmt, DrAmt)
+      VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${USERID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', ${formatDate(TRDATE)}, 9, 0, '${IGSTAMT}', 0);
+          
+      INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, DrAmt, CrAmt)
+      VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${USERID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', ${formatDate(TRDATE)}, 12, 0, '${ROUNDOFF < 0 ? -ROUNDOFF : 0}', '${ROUNDOFF > 0 ? ROUNDOFF : 0}');
+      `;
+  }
+
+  // Additional code for flag 'P' or 'SR'
+  if (flag === 'P' || flag === 'SR') {
+    query += `
+      DELETE FROM Tranentry 
+      WHERE EntryNo = '${operation === 'update' ? entryNo : maxEntryNo + 1}' AND Flag = '${flag}' AND DeptCode = '${DeptCode}' AND YearCode = '${YearCode}' AND CompCode = '${CompCode}';
+            
+      INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, CrAmt, DrAmt)
+      VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${USERID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', ${formatDate(TRDATE)}, '${ACCODE}', '${ACCODE}', '${NETAMT}', 0);
+        
+      INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, DrAmt, CrAmt)
+      VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${USERID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', ${formatDate(TRDATE)}, 3, 0, '${TAXABLEAMT}', 0);
+        
+      INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, DrAmt, CrAmt)
+      VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${USERID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', ${formatDate(TRDATE)}, 7, 0, '${CGSTAMT}', 0);
+        
+      INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, DrAmt, CrAmt)
+      VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${USERID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', ${formatDate(TRDATE)}, 8, 0, '${SGSTAMT}', 0);
+        
+      INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, DrAmt, CrAmt)
+      VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${USERID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', ${formatDate(TRDATE)}, 9, 0, '${IGSTAMT}', 0);
+        
+      INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, CrAmt, DrAmt)
+      VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${USERID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', ${formatDate(TRDATE)}, 12, 0, '${ROUNDOFF < 0 ? -ROUNDOFF : 0}', '${ROUNDOFF > 0 ? ROUNDOFF : 0}');
+      `;
+  }
+
+  // Execute the SQL query
+  sql.query(query, (err) => {
+    if (err) {
+      console.log('Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    } else {
+      res.json({ message: 'Data saved and deleted successfully' });
+    }
+  });
 });
+
+
+
 
 app.delete('/api/NewSelltries/:entryNo/:flag', async (req, res) => {
   const { entryNo, flag } = req.params;
@@ -5303,7 +5634,7 @@ app.get('/api/distinct-sellentries/:flag/:dept/:year/:company', (req, res) => {
 
 
   const query = `
-      SELECT distinct ENTRYNO, BILLNO, TRDATE,FLAG,CompCode, BILLDATE ,ACCODE,DESC1,DESC2,NETAMT
+      SELECT *
       FROM Billsub
       WHERE Flag = @flag
         AND DeptCode = @dept
@@ -8580,49 +8911,232 @@ app.get('/api/billentry/:flag', (req, res) => {
   request.query(query, (err, result) => {
     if (err) {
       console.log('Error:', err);
-      res.status(500).json({ error: 'Internal server error' });
+      res.status(500).json({ error: 'Internal server error' });     
     } else {
       res.json(result.recordset);
     }
   });
 });
 
+//ArrayAPI for sell entry
+/* app.post('/api/billentry/:EntryNo/:Flag', (req, res) => {
+  try {
+    const EntryNo = req.params.EntryNo;
+    const Flag = req.params.Flag;
+    const entryData = req.body;
 
+    const values = entryData.map(entry => {
+      const NARR = entry.NARR ? `'${entry.NARR}'` : 'NULL';
+      const ROUNDOFF = typeof entry.ROUNDOFF === 'number' && !isNaN(entry.ROUNDOFF) ? entry.ROUNDOFF : 0;
+      return `(
+        ${entry.ENTRYNO}, 
+        '${entry.FLAG}',
+        '${entry.TRDATE}', 
+        ${entry.AMOUNT || 0},
+        '${entry.ACCODE}',
+        '${entry.ITCODE}',
+        '${entry.BILLNO}',
+        '${entry.BILLDATE}',
+        '${entry.DESC1}',
+        '${entry.DESC2}',
+        '${entry.MRP}',
+        ${entry.QTY || 0},
+        ${entry.RATE || 0},
+        ${entry.DISCAMT || 0},
+        ${entry.TAXABLEAMT || 0},
+        '${entry.GSTRATECODE}',
+        ${entry.GSTRATE || 0},
+        ${entry.CGSTAMT || 0},
+        ${entry.SGSTAMT || 0},
+        ${entry.IGSTAMT || 0},
+        ${ROUNDOFF},
+        ${entry.NETAMT || 0},
+        ${NARR},
+        ${entry.ADDOTHERAMT || 0},
+        ${entry.LESSOTHERAMT || 0},
+        ${entry.DeptCode || 0},
+        ${entry.YearCode || 0},
+        ${entry.CompCode || 0},
+        ${entry.USERID || 0},
+        ${entry.uniqueCode || 0}
+      )`;
+    }).join(',');
+    console.log("values :-",values); 
+    const query = `
+      DELETE FROM Billsub WHERE ENTRYNO = '${EntryNo}' AND FLAG = '${Flag}';
+
+      INSERT INTO Billsub (
+        ENTRYNO,
+        FLAG,  
+        TRDATE,
+        AMOUNT,
+        ACCODE,
+        ITCODE,
+        BILLNO,
+        BILLDATE,
+        DESC1,
+        DESC2,
+        MRP,
+        QTY,
+        RATE,
+        DISCAMT,
+        TAXABLEAMT,
+        GSTRATECODE,
+        GSTRATE,
+        CGSTAMT,
+        SGSTAMT,
+        IGSTAMT,
+        ROUNDOFF,
+        NETAMT,
+        NARR,
+        ADDOTHERAMT,
+        LESSOTHERAMT,
+        DeptCode,
+        YearCode,
+        CompCode,
+        USERID,
+        COMPUTERID
+      ) VALUES ${values};`;
+
+    sql.query(query, (err, result) => {
+      if (err) {
+        console.log('Error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+      } else {
+        res.json({ message: 'Data saved successfully' });
+      }
+    });
+  } catch (error) {
+    console.log('Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}); */
+
+
+{/* 
+    app.post('/api/SaveBillentries', async (req, res) => {
+  const { flag, DeptCode, YearCode, CompCode, trDate, AcCode, BillNo, BillDate, Desc1, Desc2, operation, entryNo, RoundOff, TotNetAmt, TotIGST, TotCGST, TotSGST, GrossTotAmt, UserID } = req.body;
+
+  // SQL query to insert data into TranEntry and delete from TranEntryTempSub
+  let query = `
+
+      
+      delete from billentry where EntryNo = '${operation === 'update' ? entryNo : maxEntryNo + 1}' AND Flag = '${flag}' AND DeptCode = '${DeptCode}' AND YearCode = '${YearCode}'  AND CompCode = '${CompCode}';
+        INSERT INTO BillEntry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, billno, billdate, TaxableAmt, CgstAmt, SgstAmt, IgstAmt, RoundOff, NetAmt)
+        VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${UserID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', '${trDate}', '${AcCode}', '${AcCode}', '${BillNo}',' ${BillDate}', '${GrossTotAmt}','${TotCGST}', '${TotSGST}','${TotIGST}','${RoundOff}', '${TotNetAmt}');`
+  if (flag === 'S' || flag === 'PR') {
+    // Additional code to run when flag is 'P' or 'S'
+    query += `
+          DELETE FROM Tranentry 
+          WHERE EntryNo = '${operation === 'update' ? entryNo : maxEntryNo + 1}' AND Flag = '${flag}' AND DeptCode = '${DeptCode}' AND YearCode = '${YearCode}' AND CompCode = '${CompCode}';
+    
+          INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, DrAmt,CrAmt)
+          VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${UserID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', '${trDate}','${AcCode}', '${AcCode}','${TotNetAmt}',0);
+    
+    
+          INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, CrAmt,DrAmt)
+          VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${UserID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${trDate}', 4,0,'${GrossTotAmt}',0);
+    
+    
+          INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, CrAmt,DrAmt)
+          VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${UserID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${trDate}', 7,0,'${TotCGST}',0);
+    
+    
+          INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, CrAmt,DrAmt)
+          VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${UserID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${trDate}', 8,0,'${TotSGST}',0);
+    
+    
+          INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, CrAmt,DrAmt)
+          VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${UserID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${trDate}', 9,0,'${TotIGST}',0);
+          
+          INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, DrAmt, CrAmt)
+          VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${UserID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${trDate}', 12,0,'${RoundOff < 0 ? -RoundOff : 0}','${RoundOff > 0 ? RoundOff : 0}');
+          `;
+  }
+  if (flag === 'P' || flag === 'SR') {
+    // Additional code to run when flag is 'P' or 'S'
+    query += `
+            DELETE FROM Tranentry 
+            WHERE EntryNo = '${operation === 'update' ? entryNo : maxEntryNo + 1}' AND Flag = '${flag}' AND DeptCode = '${DeptCode}' AND YearCode = '${YearCode}' AND CompCode = '${CompCode}';
+            
+            INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, CrAmt,DrAmt)
+            VALUES ('${CompCode}', '${DeptCode}', '${YearCode}', '${UserID}', '${flag}', '${operation === 'update' ? entryNo : maxEntryNo + 1}', '${trDate}', '${AcCode}','${AcCode}','${TotNetAmt}',0);
+        
+            
+            INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, DrAmt,CrAmt)
+            VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${UserID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${trDate}', 3,0,'${GrossTotAmt}',0);
+        
+            
+            INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, DrAmt,CrAmt)
+            VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${UserID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${trDate}', 7,0,'${TotCGST}',0);
+        
+            
+            INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, DrAmt,CrAmt)
+            VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${UserID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${trDate}', 8,0,'${TotSGST}',0);
+        
+            
+            INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, DrAmt,CrAmt)
+            VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${UserID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${trDate}', 9,0,'${TotIGST}',0);
+        
+            
+            INSERT INTO Tranentry (CompCode, Deptcode, YearCode, UserId, flag, entryno, trdate, accode, subaccode, CrAmt, DrAmt)
+            VALUES ('${CompCode}','${DeptCode}', '${YearCode}', '${UserID}', '${flag}','${operation === 'update' ? entryNo : maxEntryNo + 1}','${trDate}', 12,0,'${RoundOff < 0 ? -RoundOff : 0}','${RoundOff > 0 ? RoundOff : 0}');
+            `;
+  }
+  sql.query(query, (err) => {
+    if (err) {
+      console.log('Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    } else {
+      res.json({ message: 'Data saved and deleted successfully' });
+    }
+  });
+});
+*/}
+
+/* 
 app.post('/api/billentry/:EntryNo/:Flag', (req, res) => {
   try {
     const EntryNo = req.params.EntryNo;
     const Flag = req.params.Flag;
     const entryData = req.body;
 
-    const values = entryData.map(entry => `(
-      ${entry.ENTRYNO}, 
-      '${entry.FLAG}',
-      '${entry.TRDATE}', 
-      ${entry.AMOUNT || 0},
-      '${entry.ACCODE}',
-      '${entry.ITCODE}',
-      '${entry.BILLNO}',
-      '${entry.BILLDATE}',
-      '${entry.DESC1}',
-      '${entry.DESC2}',
-      '${entry.MRP}',
-      ${entry.QTY || 0},
-      ${entry.RATE || 0},
-      ${entry.DISCAMT || 0},
-      ${entry.TAXABLEAMT || 0},
-      '${entry.GSTRATECODE}',
-      ${entry.GSTRATE || 0},
-      ${entry.CGSTAMT || 0},
-      ${entry.SGSTAMT || 0},
-      ${entry.IGSTAMT || 0},
-      ${entry.ROUNDOFF || 0},
-      ${entry.NETAMT || 0},
-      ${entry.DeptCode || 0},
-      ${entry.YearCode || 0},
-      ${entry.CompCode || 0},
-      ${entry.USERID || 0},
-      ${entry.uniqueCode || 0}
-    )`).join(',');
+    const values = entryData.map(entry => {
+      const narration = entry.NARR ? `'${entry.NARR}'` : 'NULL';
+      return `(
+        ${entry.ENTRYNO}, 
+        '${entry.FLAG}',
+        '${entry.TRDATE}', 
+        ${entry.AMOUNT || 0},
+        '${entry.ACCODE}',
+        '${entry.ITCODE}',
+        '${entry.BILLNO}',
+        '${entry.BILLDATE}',
+        '${entry.DESC1}',
+        '${entry.DESC2}',
+        '${entry.MRP}',
+        ${entry.QTY || 0},
+        ${entry.RATE || 0},
+        ${entry.DISCAMT || 0},
+        ${entry.TAXABLEAMT || 0},
+        '${entry.GSTRATECODE}',
+        ${entry.GSTRATE || 0},
+        ${entry.CGSTAMT || 0},
+        ${entry.SGSTAMT || 0},
+        ${entry.IGSTAMT || 0},
+        ${entry.ROUNDOFF || 0},
+        ${entry.NETAMT || 0},
+        ${narration},
+        ${entry.ADDOTHERAMT || 0},
+        ${entry.LESSOTHERAMT || 0},
+        ${entry.DeptCode || 0},
+        ${entry.YearCode || 0},
+        ${entry.CompCode || 0},
+        ${entry.USERID || 0},
+        ${entry.uniqueCode || 0}
+      )`;
+    }).join(',');
+    
 
     console.log("Entry Data :", values)
 
@@ -8652,6 +9166,9 @@ app.post('/api/billentry/:EntryNo/:Flag', (req, res) => {
       IGSTAMT,
       ROUNDOFF,
       NETAMT,
+      NARR,
+      ADDOTHERAMT,
+      LESSOTHERAMT,
       DeptCode,
       YearCode,
       CompCode,
@@ -8671,7 +9188,7 @@ app.post('/api/billentry/:EntryNo/:Flag', (req, res) => {
     console.log('Error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
-});
+}); */
 
 
 
