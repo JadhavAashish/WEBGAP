@@ -9194,7 +9194,7 @@ app.post('/api/billentry/:EntryNo/:Flag', (req, res) => {
 
 // For deduction Type Master------------------------------------------------------------------------------------
 
-// GET all deduction Type Master
+// GET all deduction Type Master    
 app.get('/api/deduction-type', (req, res) => {
   const query = 'SELECT * FROM DeductionTypeMaster';
   sql.query(query, (err, result) => {
