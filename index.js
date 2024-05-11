@@ -26,6 +26,18 @@ const dbConfig = {
   },
 };
 
+/* const dbConfig = {
+  user: 'Well1',
+  password: '228608',
+  server: 'DELL29\\SQLEXPRESS',
+  database: 'your_database_name',
+  options: {
+    encrypt: false, // Change this to true if you're using encryption
+  },
+}; */
+
+
+
 const defaultDatabase = 'WinGapCompany'; // Default database name
 
 // Connect to the default database on server startup
@@ -8898,7 +8910,7 @@ app.delete('/api/gangsubmaster/:Remark1', (req, res) => {
 
 //For Bill Entry
 app.get('/api/billentry/:flag', (req, res) => {
-  const flag = req.params.flag;
+  const flag = req.params.flag; 
 
   const query = `
     SELECT *
@@ -9194,7 +9206,7 @@ app.post('/api/billentry/:EntryNo/:Flag', (req, res) => {
 
 // For deduction Type Master------------------------------------------------------------------------------------
 
-// GET all deduction Type Master    
+// GET all deduction Type Master
 app.get('/api/deduction-type', (req, res) => {
   const query = 'SELECT * FROM DeductionTypeMaster';
   sql.query(query, (err, result) => {
