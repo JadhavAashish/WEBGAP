@@ -5,10 +5,10 @@ const sql = require('mssql');
 const axios = require('axios');
 const bcrypt = require('bcrypt');
 const path = require('path');
-const dotenv = require('dotenv');
+/* const dotenv = require('dotenv');
 const fs = require('fs');
 
-dotenv.config();
+dotenv.config(); */
 
 const app = express();
 app.use(bodyParser.json());
