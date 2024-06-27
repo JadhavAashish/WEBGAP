@@ -4,7 +4,6 @@ const cors = require('cors');
 const sql = require('mssql');
 const axios = require('axios');
 const bcrypt = require('bcrypt');
-const path = require('path');
 
 const app = express();
 app.use(bodyParser.json());
