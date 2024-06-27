@@ -5,24 +5,10 @@ const sql = require('mssql');
 const axios = require('axios');
 const bcrypt = require('bcrypt');
 const path = require('path');
-/* const dotenv = require('dotenv');
-const fs = require('fs');
-
-dotenv.config(); */
 
 const app = express();
 app.use(bodyParser.json());
 app.use(cors());
-
-/* const dbConfig = {
- server: 'SERVERNEW\\WSSERVER2022',
-  user: 'Well1',
-  password: '228608',
-  port :1433,
-  options: {
-    trustServerCertificate: true,
-  },
-}; */
 
 const dbConfig = {
   user: 'Well1',
@@ -34,41 +20,6 @@ const dbConfig = {
     trustServerCertificate: true,
   },
 };
-
-/* const dbConfig = {
-  server: process.env.DB_SERVER,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  port: parseInt(process.env.DB_PORT, 10),
-  options: {
-    trustServerCertificate: true,
-  },
-}; */
-
-/* const configFilePath = path.join(__dirname, 'dbConfig.txt');
-
-// Function to read the database configuration from a file
-function readConfigFile(filePath) {
-  try {
-    const configFileContent = fs.readFileSync(filePath, 'utf-8').split('\n');
-    const [server, port] = configFileContent;
-    return {
-      server: server.trim(),
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      port: parseInt(port.trim(), 10),
-      options: {
-        trustServerCertificate: true,
-      },
-    };
-  } catch (error) {
-    console.error('Error reading config file:', error);
-    throw new Error('Failed to read database configuration');
-  }
-}
-
-// Read the configuration at the start
-const dbConfig = readConfigFile(configFilePath); */
 
 const defaultDatabase = 'BankCompany'; // Default database name
 
@@ -106,9 +57,6 @@ app.get('/api/database_year_master/:compCode', (req, res) => {
   });
 });
 
-
-
-// Assuming you're using Express.js for your server
 
 app.post('/api/dblogin', (req, res) => {
   const { clientId, DBpassword } = req.body;
@@ -646,7 +594,7 @@ app.put('/api/party/:PartyCode', (req, res) => {
   });
 });
 
-app.delete('/api/party/:PartyCode', (req,res)=>{
+/* app.delete('/api/party/:PartyCode', (req,res)=>{
   const { PartyCode } = req.params;
   const query = `DELETE FROM PartyMaster WHERE PartyCode='${PartyCode}'`;
   sql.query(query,(err) => {
@@ -657,6 +605,53 @@ app.delete('/api/party/:PartyCode', (req,res)=>{
         res.json({ message: 'PArty deleted successfully' });
       }
     });
+}); */
+
+app.delete('/api/party/:PartyCode', async (req, res) => {
+  const { PartyCode } = req.params;
+  const UserName = req.headers['username'];
+
+  try {
+    // Fetch user permissions from the database based on the user making the request
+    const userPermissionsQuery = `SELECT AllowMasterDelete FROM Users WHERE UserName='${UserName}'`;
+
+    sql.query(userPermissionsQuery, async (userErr, userResults) => {
+      if (userErr) {
+        console.log('Error fetching user permissions:', userErr);
+        res.status(500).json({ error: 'Internal server error' });
+        return;
+      }
+
+      // Check if user results are not empty
+      if (userResults.recordset && userResults.recordset.length > 0) {
+        // Check if user has permission to delete entries
+        const { AllowMasterDelete } = userResults.recordset[0];
+
+        if (AllowMasterDelete === 1) {
+          // The user has permission to delete entries
+          const deleteQuery = `DELETE FROM PartyMaster WHERE PartyCode='${PartyCode}'`;
+
+          sql.query(deleteQuery, (deleteErr) => {
+            if (deleteErr) {
+              console.log('Error deleting entry:', deleteErr);
+              res.status(500).json({ error: 'Internal server error' });
+            } else {
+              res.json({ message: 'Year deleted successfully' });
+            }
+          });
+        } else {
+          // User does not have permission to delete entries
+          res.status(403).json({ error: 'Permission denied. You do not have the necessary permissions to delete entries.' });
+        }
+      } else {
+        // User not found in the database
+        res.status(404).json({ error: 'User not found.' });
+      }
+    });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // For BankMaster  ------------------------------------------------------------------------------------
@@ -720,7 +715,7 @@ app.put('/api/bank/:BankCode', (req, res) => {
   });
 });
 
-app.delete('/api/bank/:BankCode', (req,res)=>{
+/* app.delete('/api/bank/:BankCode', (req,res)=>{
   const { PartyCode } = req.params;
   const query = `DELETE FROM BankMaster WHERE BankCode=${BankCode}`;
   sql.query(query,(err) => {
@@ -731,8 +726,55 @@ app.delete('/api/bank/:BankCode', (req,res)=>{
         res.json({ message: 'Bank deleted successfully' });
       }
     });
-});
+}); */
 
+
+app.delete('/api/bank/:BankCode', async (req, res) => {
+  const { BankCode } = req.params;
+  const UserName = req.headers['username'];
+
+  try {
+    // Fetch user permissions from the database based on the user making the request
+    const userPermissionsQuery = `SELECT AllowMasterDelete FROM Users WHERE UserName='${UserName}'`;
+
+    sql.query(userPermissionsQuery, async (userErr, userResults) => {
+      if (userErr) {
+        console.log('Error fetching user permissions:', userErr);
+        res.status(500).json({ error: 'Internal server error' });
+        return;
+      }
+
+      // Check if user results are not empty
+      if (userResults.recordset && userResults.recordset.length > 0) {
+        // Check if user has permission to delete entries
+        const { AllowMasterDelete } = userResults.recordset[0];
+
+        if (AllowMasterDelete === 1) {
+          // The user has permission to delete entries
+          const deleteQuery = `DELETE FROM BankMaster WHERE BankCode='${BankCode}'`;
+
+          sql.query(deleteQuery, (deleteErr) => {
+            if (deleteErr) {
+              console.log('Error deleting entry:', deleteErr);
+              res.status(500).json({ error: 'Internal server error' });
+            } else {
+              res.json({ message: 'Year deleted successfully' });
+            }
+          });
+        } else {
+          // User does not have permission to delete entries
+          res.status(403).json({ error: 'Permission denied. You do not have the necessary permissions to delete entries.' });
+        }
+      } else {
+        // User not found in the database
+        res.status(404).json({ error: 'User not found.' });
+      }
+    });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 //For Bank ENtry
 
