@@ -976,8 +976,8 @@ app.delete('/api/bankentries/:EntryNo', (req, res) => {
 }); */
 
 app.get('/api/bankRegister', (req, res) => {
-  const { startDate, endDate } = req.query;
-  console.log({ startDate, endDate });
+  const { startDate, endDate, partyCode } = req.query;
+  console.log({ startDate, endDate, partyCode });
   let query = `SELECT ENTRYNO, TRDATE, BANKCODE, PARTYCODE, AMOUNT, CHEQUENO, REMARK1 FROM BANKENTRIES Where 1=1 AND `;
   
   const request = new sql.Request();
@@ -989,6 +989,11 @@ app.get('/api/bankRegister', (req, res) => {
   if (endDate) {
     query += ' AND TRDATE <= @EndDate';
     request.input('EndDate', sql.NVarChar, endDate);
+  }
+
+  if (partyCode) {
+    query += ' AND PARTYCODE = @PartyCode';
+    request.input('PartyCode', sql.Int, partyCode);
   }
 
   request.query(query, (err, result) => {
