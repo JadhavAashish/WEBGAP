@@ -843,9 +843,8 @@ app.delete('/api/bank/:BankCode', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
+//--------------------------------------------------------------------------------
 //For Bank ENtry
-
 
 app.get('/api/bankentries', (req, res) => {
   const query = 'SELECT * FROM BANKENTRIES';
@@ -883,7 +882,7 @@ app.put('/api/bankentries/:EntryNo', (req, res) => {
                  CHEQUENO = '${CHQNO}', 
                  REMARK1 = '${REMARK1}',
                  REMARK2 = '${REMARK2}',
-                 REMARK3 = '${REMARK3}',
+                 REMARK3 = '${REMARK3}'
                  WHERE ENTRYNO = ${EntryNo}`;
   sql.query(query, (err) => {
     if (err) {
@@ -908,6 +907,7 @@ app.delete('/api/bankentries/:EntryNo', (req, res) => {
   });
 });
 
+
 //for Bank Register
 
 /* app.get('/api/bankentries', (req, res) => {
@@ -926,7 +926,7 @@ app.delete('/api/bankentries/:EntryNo', (req, res) => {
 app.get('/api/bankRegister', (req, res) => {
   const { startDate, endDate, partyCode } = req.query;
   console.log({ startDate, endDate, partyCode });
-  let query = `SELECT ENTRYNO, TRDATE, BANKCODE, PARTYCODE, AMOUNT, CHEQUENO, REMARK1 FROM BANKENTRIES Where 1=1 AND `;
+  let query = `SELECT ENTRYNO, TRDATE, PARTYCODE, BANKCODE, CHEQUENO, REMARK1, REMARK3, AMOUNT FROM BANKENTRIES Where 1=1 AND `;
   
   const request = new sql.Request();
   if (startDate) {
@@ -953,5 +953,3 @@ app.get('/api/bankRegister', (req, res) => {
     }
   });
 });
-
-
