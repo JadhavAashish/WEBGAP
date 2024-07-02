@@ -846,6 +846,7 @@ app.delete('/api/bank/:BankCode', async (req, res) => {
 
 //For Bank ENtry
 
+
 app.get('/api/bankentries', (req, res) => {
   const query = 'SELECT * FROM BANKENTRIES';
   sql.query(query, (err, result) => {
@@ -906,7 +907,6 @@ app.delete('/api/bankentries/:EntryNo', (req, res) => {
     }
   });
 });
-
 
 //for Bank Register
 
