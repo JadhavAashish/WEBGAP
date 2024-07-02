@@ -57,9 +57,6 @@ app.get('/api/database_year_master/:compCode', (req, res) => {
 });
 
 
-
-// Assuming you're using Express.js for your server
-
 app.post('/api/dblogin', (req, res) => {
   const { clientId, DBpassword } = req.body;
   console.log("parameters ",{ clientId, DBpassword });
@@ -302,68 +299,6 @@ app.put('/api/change-password', async (req, res) => {
   }
 });
 
-/* app.post('/api/Users', async (req, res) => {
-  const {
-    username,
-    password,
-    isAdmin,
-    allowMasterAdd,
-    allowMasterEdit,
-    allowMasterDelete,
-    allowEntryAdd,
-    allowEntryEdit,
-    allowEntryDelete,
-    allowBackdatedEntry,
-    passwordHint,
-  } = req.body;
-
-  try {
-    // Hash the password
-    const hashedPassword = await bcrypt.hash(password, 10);
-    //console.log("Hashed Password",hashedPassword);
-    const query = `
-          INSERT INTO Users (
-            UserName,
-            Password,
-            Passwordhint,
-            Administrator,
-            AllowMasterAdd,
-            AllowMasterEdit,
-            AllowMasterDelete,
-            AllowEntryAdd,
-            AllowEntryEdit,
-            AllowEntryDelete,
-            AllowBackdatedEntry
-          )
-          VALUES (
-            '${username}',
-            '${hashedPassword}',       --Store the hashed password
-            '${passwordHint}',
-            '${isAdmin ? 1 : 0}',
-            '${allowMasterAdd ? 1 : 0}',
-            '${allowMasterEdit ? 1 : 0}',
-            '${allowMasterDelete ? 1 : 0}',
-            '${allowEntryAdd ? 1 : 0}',
-            '${allowEntryEdit ? 1 : 0}',
-            '${allowEntryDelete ? 1 : 0}',
-            '${allowBackdatedEntry ? 1 : 0}'
-          )
-        `;
-
-    sql.query(query, (err) => {
-      if (err) {
-        console.log('Error:', err);
-        res.status(500).json({ error: 'Internal server error' });
-      } else {
-        res.json({ message: 'User created successfully' });
-      }
-    });
-  } catch (error) {
-    console.error('Error hashing password:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-}); */
-
 
 app.post('/api/Users', async (req, res) => {
   let {
@@ -432,7 +367,7 @@ app.post('/api/Users', async (req, res) => {
 
 
 app.get('/api/getUsers', (req, res) => {
-  const query = `SELECT * FROM Users`;
+  const query = `SELECT * FROM dbo.Users`;
 
   sql.query(query, (err, result) => {
     if (err) {
@@ -443,50 +378,6 @@ app.get('/api/getUsers', (req, res) => {
     }
   });
 });
-
-/* app.get('/api/getUsers', async (req, res) => {
-  try {
-    await poolConnect; // ensures the pool has connected
-    const request = new sql.Request(pool);
-    const result = await request.query('SELECT * FROM Users');
-    res.json(result.recordset);
-  } catch (err) {
-    console.error('SQL error', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-}); */
-
-// Example endpoint: Update an existing item
-/* app.put('/api/updateUser/:username', async (req, res) => {
-  const { username } = req.params;
-  const {
-    password,
-    isAdmin,
-    allowMasterAdd,
-    allowMasterEdit,
-    allowMasterDelete,
-    allowEntryAdd,
-    allowEntryEdit,
-    allowEntryDelete,
-    allowBackdatedEntry,
-    passwordHint } = req.body;
-
-  try {
-    const hashPassword = await bcrypt.hash(password, 10);
-    const query = `UPDATE Users SET  Password='${hashPassword}', Administrator=${isAdmin ? 1 : 0}, AllowMasterAdd=${allowMasterAdd ? 1 : 0}, AllowMasterEdit=${allowMasterEdit ? 1 : 0}, AllowMasterDelete=${allowMasterDelete ? 1 : 0}, AllowEntryAdd=${allowEntryAdd ? 1 : 0}, AllowEntryEdit=${allowEntryEdit ? 1 : 0}, AllowEntryDelete=${allowEntryDelete ? 1 : 0}, AllowBackdatedEntry=${allowBackdatedEntry ? 1 : 0},Passwordhint='${passwordHint}' WHERE UserName ='${username}'`;
-    sql.query(query, (err) => {
-      if (err) {
-        console.log('Error:', err);
-        res.status(500).json({ error: 'Internal server error' });
-      } else {
-        res.json({ message: 'Item updated successfully' });
-      }
-    });
-  } catch (error) {
-    console.log("error for updating hashpassword", error);
-    res.status(500).json({ error: 'internal server error' });
-  }
-}); */
 
 
 app.put('/api/updateUser/:username', async (req, res) => {
@@ -775,6 +666,62 @@ app.delete('/api/party/:PartyCode', async (req, res) => {
   }
 });
 
+
+/* app.put('/api/updateRemark/:EntryNo', async (req, res) => {
+  const {remark2} = req.body;
+  const { EntryNo } = req.params;
+
+  console.log({ EntryNo, remark2 });
+  try {
+    const query = `UPDATE BANKENTRIES SET REMARK2 = '${remark2}' WHERE ENTRYNO = ${EntryNo}`;
+
+    if (query.affectedRows > 0) {
+      res.status(200).json({ message: 'Remark updated successfully' });
+    } else {
+      res.status(404).json({ message: 'Entry not found' });
+    }
+  } catch (error) {
+    console.error('Error updating remark:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+}); */
+
+
+app.put('/api/updateRemark/:EntryNo', async (req, res) => {
+  const { remark2 } = req.body;
+  const { EntryNo } = req.params;
+
+  console.log({ EntryNo, remark2 });
+
+  try {
+    const query = `UPDATE BANKENTRIES SET REMARK2 = @remark2 WHERE ENTRYNO = @EntryNo`;
+
+    const request = new sql.Request();
+    request.input('remark2', sql.NVarChar, remark2);
+    request.input('EntryNo', sql.Int, EntryNo);
+
+    request.query(query, (err, result) => {
+      if (err) {
+        console.log('Error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+      } else {
+        if (result.rowsAffected && result.rowsAffected[0] > 0) {
+          res.json({
+            message: 'Remark updated successfully',
+            EntryNo,
+            remark2
+          });
+        } else {
+          res.status(404).json({ error: 'Record not found' });
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // For BankMaster  ------------------------------------------------------------------------------------
 
 app.get('/api/bank', (req, res) => {
@@ -912,8 +859,8 @@ app.get('/api/bankentries', (req, res) => {
 });
 
 app.post('/api/bankentries', (req, res) => {
-  const { ENTRYNO, TRDATE, BANKCODE, PARTYCODE, AMOUNT, CHQNO, REMARK1, REMARK2 } = req.body;
-  const query = `INSERT INTO BANKENTRIES (ENTRYNO, TRDATE, BANKCODE, PARTYCODE, AMOUNT, CHEQUENO, REMARK1, REMARK2) VALUES (${ENTRYNO}, '${TRDATE}', '${BANKCODE}', '${PARTYCODE}', ${AMOUNT}, '${CHQNO}', '${REMARK1}', '${REMARK2}')`;
+  const { ENTRYNO, TRDATE, BANKCODE, PARTYCODE, AMOUNT, CHQNO, REMARK1, REMARK2, REMARK3 } = req.body;
+  const query = `INSERT INTO BANKENTRIES (ENTRYNO, TRDATE, BANKCODE, PARTYCODE, AMOUNT, CHEQUENO, REMARK1, REMARK2, REMARK3) VALUES (${ENTRYNO}, '${TRDATE}', '${BANKCODE}', '${PARTYCODE}', ${AMOUNT}, '${CHQNO}', '${REMARK1}', '${REMARK2}', '${REMARK3}')`;
   sql.query(query, (err) => {
     if (err) {
       console.log('Error:', err);
@@ -926,7 +873,7 @@ app.post('/api/bankentries', (req, res) => {
 
 app.put('/api/bankentries/:EntryNo', (req, res) => {
   const EntryNo = req.params.EntryNo;
-  const { TRDATE, BANKCODE, PARTYCODE, AMOUNT, CHQNO, REMARK2, REMARK1 } = req.body;
+  const { TRDATE, BANKCODE, PARTYCODE, AMOUNT, CHQNO, REMARK2, REMARK1, REMARK3 } = req.body;
   const query = `UPDATE BANKENTRIES SET 
                  TRDATE = '${TRDATE}', 
                  BANKCODE = '${BANKCODE}', 
@@ -934,7 +881,8 @@ app.put('/api/bankentries/:EntryNo', (req, res) => {
                  AMOUNT = ${AMOUNT}, 
                  CHEQUENO = '${CHQNO}', 
                  REMARK1 = '${REMARK1}',
-                 REMARK2 = '${REMARK2}' 
+                 REMARK2 = '${REMARK2}',
+                 REMARK3 = '${REMARK3}',
                  WHERE ENTRYNO = ${EntryNo}`;
   sql.query(query, (err) => {
     if (err) {
