@@ -926,7 +926,7 @@ app.delete('/api/bankentries/:EntryNo', (req, res) => {
 app.get('/api/bankRegister', (req, res) => {
   const { startDate, endDate, partyCode } = req.query;
   console.log({ startDate, endDate, partyCode });
-  let query = `SELECT ENTRYNO, TRDATE, PARTYCODE, BANKCODE, CHEQUENO, REMARK1, REMARK3, AMOUNT FROM BANKENTRIES Where 1=1 AND `;
+  let query = `SELECT ENTRYNO, TRDATE, PARTYCODE, BANKCODE, CHEQUENO, AMOUNT, REMARK1, REMARK3 FROM BANKENTRIES Where 1=1 AND `;
   
   const request = new sql.Request();
   if (startDate) {
