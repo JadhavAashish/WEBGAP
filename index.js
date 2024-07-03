@@ -737,10 +737,10 @@ app.get('/api/bank', (req, res) => {
 });
 
 app.post('/api/bank', (req, res) => {
-  const { BANKCODE, BANKNAME, BRANCH, IFSCCODE, ACCOUNTNO, ACCOUNTTYPE, REMARK1 } = req.body;
+  const { BANKCODE, BANKNAME, BRANCH, IFSCCODE, ACCOUNTNO, ACCOUNTTYPE, REMARK1, ACCOUNTNAME, MOBILENO } = req.body;
   const query = `
-    INSERT INTO BANKMASTER (BANKCODE, BANKNAME, BRANCH, IFSCCODE, ACCOUNTNO, ACCOUNTTYPE, REMARK1)
-    VALUES ('${BANKCODE}', N'${BANKNAME}', N'${BRANCH}', '${IFSCCODE}', '${ACCOUNTNO}', '${ACCOUNTTYPE}', N'${REMARK1}');
+    INSERT INTO BANKMASTER (BANKCODE, BANKNAME, BRANCH, IFSCCODE, ACCOUNTNO, ACCOUNTTYPE, REMARK1, ACCOUNTNAME, MOBILENO)
+    VALUES ('${BANKCODE}', N'${BANKNAME}', N'${BRANCH}', '${IFSCCODE}', '${ACCOUNTNO}', '${ACCOUNTTYPE}', N'${REMARK1}', '${ACCOUNTNAME}','${MOBILENO}');
   `;
   sql.query(query, (err) => {
     if (err) {
@@ -754,11 +754,11 @@ app.post('/api/bank', (req, res) => {
 
 app.put('/api/bank/:BankCode', (req, res) => {
   const { BankCode } = req.params;
-  const { BANKNAME, BRANCH, IFSCCODE, ACCOUNTNO, ACCOUNTTYPE, REMARK1 } = req.body;
+  const { BANKNAME, BRANCH, IFSCCODE, ACCOUNTNO, ACCOUNTTYPE, REMARK1, ACCOUNTNAME, MOBILENO } = req.body;
   const query = `
     UPDATE BANKMASTER
     SET BANKNAME=N'${BANKNAME}', BRANCH=N'${BRANCH}', IFSCCODE='${IFSCCODE}', ACCOUNTNO='${ACCOUNTNO}', ACCOUNTTYPE='${ACCOUNTTYPE}', REMARK1=N'${REMARK1}'
-    WHERE BANKCODE='${BankCode}';
+    , ACCOUNTNAME='${ACCOUNTNAME}', MOBILENO='${MOBILENO}' WHERE BANKCODE='${BankCode}';
   `;
   sql.query(query, (err, result) => {
     if (err) {
@@ -942,6 +942,35 @@ app.get('/api/bankRegister', (req, res) => {
   if (partyCode) {
     query += ' AND PARTYCODE = @PartyCode';
     request.input('PartyCode', sql.Int, partyCode);
+  }
+
+  request.query(query, (err, result) => {
+    if (err) {
+      console.log('Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    } else {
+      res.json(result.recordset);
+    }
+  });
+});
+
+
+app.get('/api/bulkRegister', (req, res) => {
+  const { startDate, endDate, ChqNo } = req.query;
+  console.log({ startDate, endDate, ChqNo });
+  let query = `SELECT AMOUNT, PARTYCODE, BANKCODE FROM BANKENTRIES Where CHEQUENO = @ChqNo AND `;
+  
+  const request = new sql.Request();
+  request.input('ChqNo', sql.NVarChar, ChqNo);
+
+  if (startDate) {
+    query += ' TRDATE >= @StartDate';
+    request.input('StartDate', sql.NVarChar, startDate);
+  }
+
+  if (endDate) {
+    query += ' AND TRDATE <= @EndDate';
+    request.input('EndDate', sql.NVarChar, endDate);
   }
 
   request.query(query, (err, result) => {
